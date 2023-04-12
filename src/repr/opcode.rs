@@ -1,7 +1,7 @@
 /**
  * Represents the full range of opcodes available to the Sim6 processor
  */
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Opcode {
     Nop, // Do nothing
     Add, // Rd = Rd + Rt
@@ -23,7 +23,7 @@ pub enum Opcode {
     In, // Push Rd to port[imm]
     Out, // Move val in port[imm]
     Lda, // Load address of label
-    Movi, // Rd = imm
+    PushI, // Push word to stack
     Mul, // Rd = Rth * Rtl (unsigned)
     Imul, // Rd = Rth * Rtl (signed)
     Div, // Rd = Rth / Rtl (unsigned)
@@ -37,7 +37,7 @@ pub enum Opcode {
     Srl, // Rd = Rd >>> Rt
     Sll, // Rd = Rd >> Rt
     Clear, // Rd = 0
-    Call, // function call
+    Call, // function call (addr in Rd)
     Ret, // return from func call
     Jump, // jump to Rd
     Jeq, // jump to Rd if flags[zero]
@@ -85,7 +85,7 @@ impl Into<u16> for Opcode {
             Opcode::In    => 17,
             Opcode::Out   => 18,
             Opcode::Lda   => 19,
-            Opcode::Movi  => 20,
+            Opcode::PushI  => 20,
             Opcode::Mul   => 21,
             Opcode::Imul  => 22,
             Opcode::Div   => 23,
@@ -150,7 +150,7 @@ impl From<&String> for Opcode {
             "in"    => Opcode::In,
             "out"   => Opcode::Out,
             "lda"   => Opcode::Lda,
-            "movi"  => Opcode::Movi,
+            "pushi"  => Opcode::PushI,
             "mul"   => Opcode::Mul,
             "imul"  => Opcode::Imul,
             "div"   => Opcode::Div,

@@ -1,5 +1,8 @@
+use super::instruction::Operand;
+
+
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Register {
     None, // no register
     Ax, Al, Ah, // primary accumulator
@@ -86,25 +89,36 @@ impl From<&String> for Register {
 }
 
 impl Register {
-    pub fn get_reg_code(reg_a:&Register, reg_b:&Register) -> u16 {
+    pub fn get_reg_code(reg_a:&Operand, reg_b:&Operand) -> u16 {
         let reg_a_code = match reg_a {
-            Register::None => 0b0000,
-            Register::Al | Register::Bl | Register::Cl | Register::Dl => 0b1000,
-            Register::Ah | Register::Bh | Register::Ch | Register::Dh => 0b0100,
-            Register::Ax | Register::Bx | Register::Cx | Register::Dx | Register::Rp | Register::Fp | Register::Bp | Register::Sp => 0b1100,
-            _ => panic!("Invalid register upper found")
+            Operand::Register(reg) => {
+                match reg {
+                    Register::None => 0b0000,
+                    Register::Al | Register::Bl | Register::Cl | Register::Dl => 0b0010,
+                    Register::Ah | Register::Bh | Register::Ch | Register::Dh => 0b0001,
+                    Register::Ax | Register::Bx | Register::Cx | Register::Dx | Register::Rp | Register::Fp | Register::Bp | Register::Sp => 0b0011,
+                    _ => panic!("Invalid register upper found")
+                }
+            },
+
+            Operand::ShortImmediate(_) 
+             | Operand::LargeImmediate(_)  => panic!("First operand cannot be an immediate")
         };
 
-        let reg_b_code = match reg_b {
-            Register::None => 0b0000,
-            Register::Al | Register::Bl | Register::Cl | Register::Dl => 0b0010,
-            Register::Ah | Register::Bh | Register::Ch | Register::Dh => 0b0001,
-            Register::Ax | Register::Bx | Register::Cx | Register::Dx | Register::Rp | Register::Fp | Register::Bp | Register::Sp => 0b0011,
-            _ => panic!("Invalid lower register found")
-        };
+        match reg_b {
+            Operand::Register(reg) => {
+                return match reg {
+                    Register::None => 0b0000,
+                    Register::Al | Register::Bl | Register::Cl | Register::Dl => 0b1000,
+                    Register::Ah | Register::Bh | Register::Ch | Register::Dh => 0b0100,
+                    Register::Ax | Register::Bx | Register::Cx | Register::Dx | Register::Rp | Register::Fp | Register::Bp | Register::Sp => 0b1100,
+                    _ => panic!("Invalid lower register found")
+                } | reg_a_code;
+            },
 
-        let result = reg_a_code | reg_b_code;
-        result
+            Operand::ShortImmediate(_)
+             | Operand::LargeImmediate(_) => return reg_a_code << 2
+        };
     }
 }
 
@@ -113,6 +127,7 @@ impl Register {
 #[cfg(test)]
 mod tests {
     use super::Register;
+    use crate::repr::instruction::Operand;
 
 
     #[test]
@@ -137,20 +152,20 @@ mod tests {
 
     #[test]
     fn get_reg_code() {
-        assert_eq!(Register::get_reg_code(&Register::Ax, &Register::Bx), 0b1111);
-        assert_eq!(Register::get_reg_code(&Register::Rp, &Register::Fp), 0b1111);
+        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Ax), &Operand::Register(Register::Bx)), 0b1111);
+        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Rp), &Operand::Register(Register::Fp)), 0b1111);
 
-        assert_eq!(Register::get_reg_code(&Register::Ax, &Register::None), 0b1100);
-        assert_eq!(Register::get_reg_code(&Register::None, &Register::Dx), 0b0011);
+        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Ax), &Operand::Register(Register::None)), 0b0011);
+        assert_eq!(Register::get_reg_code(&Operand::Register(Register::None), &Operand::Register(Register::Dx)), 0b1100);
 
-        assert_eq!(Register::get_reg_code(&Register::Al, &Register::Bx), 0b1011);
-        assert_eq!(Register::get_reg_code(&Register::Ah, &Register::Bx), 0b0111);
-        assert_eq!(Register::get_reg_code(&Register::Ax, &Register::Bl), 0b1110);
-        assert_eq!(Register::get_reg_code(&Register::Ax, &Register::Bh), 0b1101);
+        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Al), &Operand::Register(Register::Bx)), 0b1110);
+        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Ah), &Operand::Register(Register::Bx)), 0b1101);
+        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Ax), &Operand::Register(Register::Bl)), 0b1011);
+        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Ax), &Operand::Register(Register::Bh)), 0b0111);
 
-        assert_eq!(Register::get_reg_code(&Register::Al, &Register::Bl), 0b1010);
-        assert_eq!(Register::get_reg_code(&Register::Ah, &Register::Bh), 0b0101);
-        assert_eq!(Register::get_reg_code(&Register::Ah, &Register::Bl), 0b0110);
-        assert_eq!(Register::get_reg_code(&Register::Al, &Register::Bh), 0b1001);
+        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Al), &Operand::Register(Register::Bl)), 0b1010);
+        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Ah), &Operand::Register(Register::Bh)), 0b0101);
+        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Ah), &Operand::Register(Register::Bl)), 0b1001);
+        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Al), &Operand::Register(Register::Bh)), 0b0110);
     }
 }
