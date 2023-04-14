@@ -4,14 +4,49 @@ use std::{fmt, error::Error};
 
 
 #[derive(Debug, Clone)]
-struct ValidationError(Instruction);
+enum ValidationError {
+    InvalidRegisterCodeError(u16, Opcode),
+    RegisterNotNoneError(Register),
+    RegisterIsNoneError(Register),
+    OperandNotRegisterError(Operand),
+    OperandNotShortImmediateError(Operand),
+    OperandNotLongImmediateError(Operand),
+    ImmediateTooLargeError(u16),
+    LabelInvalidFormat(String)
+}
 
 impl Error for ValidationError {}
 
 impl fmt::Display for ValidationError {
     fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?} is not a valid instruction!", self.0)
+        match self {
+            ValidationError::InvalidRegisterCodeError(code, opcode) => write!(f, "{:04b} is not a valid register code for opcode {:?}", code, opcode),
+            ValidationError::RegisterNotNoneError(reg) => write!(f, "Register {:?} should be None", reg),
+            ValidationError::RegisterIsNoneError(reg) => write!(f, "Register {:?} must not be None", reg),
+            ValidationError::OperandNotRegisterError(operand) => write!(f, "Operand {:?} should be a register", operand),
+            ValidationError::OperandNotShortImmediateError(operand) => write!(f, "Operand {:?} should be a short immediate", operand),
+            ValidationError::OperandNotLongImmediateError(operand) => write!(f, "Operand {:?} should be a long immediate", operand),
+            ValidationError::ImmediateTooLargeError(imm) => write!(f, "Immediate {} is too large", imm),
+            ValidationError::LabelInvalidFormat(label) => write!(f, "Label '{:?}' is in an invalid format", label)
+        }
     }
+}
+
+
+/**
+ * Takes a label and validates that it is longer than 1 character contains only ascii alphanumeric characters and 
+ * starts with a letter or an underscore.
+ */
+pub fn validate_label(label:&str) -> Result<(), Box<dyn Error>> {
+    if !(label.chars().nth(0).unwrap().is_ascii_alphabetic() || label.chars().nth(0).unwrap() == '_') {
+        return Err(Box::new(ValidationError::LabelInvalidFormat(label.to_string())));
+    }
+
+    if !label.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+        return Err(Box::new(ValidationError::LabelInvalidFormat(label.to_string())));
+    }
+
+    Ok(())
 }
 
 
@@ -25,27 +60,27 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
          | Opcode::Eitr | Opcode::Ditr | Opcode::Iret => {
             // validate the register code
             if instr.register_code != 0 {
-                return Err(Box::new(ValidationError(instr.clone())));
+                return Err(Box::new(ValidationError::InvalidRegisterCodeError(instr.register_code, instr.opcode.clone())));
             }
 
             // validate operand a
             match &instr.operand_a {
-                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError(instr.clone()))),
+                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
                 Operand::Register(reg) => {
                     match reg {
                         Register::None => {},
-                        _ => return Err(Box::new(ValidationError(instr.clone())))
+                        _ => return Err(Box::new(ValidationError::RegisterNotNoneError(reg.clone())))
                     }
                 }
             }
 
             // validate operand b
             match &instr.operand_b {
-                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError(instr.clone()))),
+                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
                 Operand::Register(reg) => {
                     match reg {
                         Register::None => {},
-                        _ => return Err(Box::new(ValidationError(instr.clone())))
+                        _ => return Err(Box::new(ValidationError::RegisterNotNoneError(reg.clone())))
                     }
                 }
             }
@@ -57,16 +92,16 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
             if !(instr.register_code == 0b1010 || instr.register_code == 0b0101 || instr.register_code == 0b1001 
                     || instr.register_code == 0b0110 || instr.register_code == 0b1111
                 ) {
-                    return Err(Box::new(ValidationError(instr.clone())));
+                    return Err(Box::new(ValidationError::InvalidRegisterCodeError(instr.register_code, instr.opcode.clone())));
             }
 
             match instr.operand_a {
-                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError(instr.clone()))),
+                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
                 _ => {}
             }
 
             match instr.operand_b {
-                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError(instr.clone()))),
+                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
                 _ => {}
             }
         }
@@ -76,25 +111,25 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
          | Opcode::Not | Opcode::Clear | Opcode::Call | Opcode::Jump | Opcode::Jeq | Opcode::Jne | Opcode::Jgt | Opcode::Jle 
          | Opcode::Jgte | Opcode::Jlte | Opcode::Jzro | Opcode::Jnzro | Opcode::Jovf | Opcode::Jcry => {
             if !(instr.register_code != 0b1100 || instr.register_code != 0b0100 || instr.register_code != 0b1000 ) {
-                return Err(Box::new(ValidationError(instr.clone())));
+                return Err(Box::new(ValidationError::InvalidRegisterCodeError(instr.register_code, instr.opcode.clone())));
             }
 
             match &instr.operand_a {
-                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError(instr.clone()))),
+                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
                 Operand::Register(reg) => {
                     match reg {
-                        Register::None => return Err(Box::new(ValidationError(instr.clone()))),
+                        Register::None => return Err(Box::new(ValidationError::RegisterIsNoneError(reg.clone()))),
                         _ => {}
                     }
                 }
             }
 
             match &instr.operand_b {
-                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError(instr.clone()))),
+                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
                 Operand::Register(reg) => {
                     match reg {
                         Register::None => {},
-                        _ => return Err(Box::new(ValidationError(instr.clone())))
+                        _ => return Err(Box::new(ValidationError::RegisterNotNoneError(reg.clone())))
                     }
                 }
             }
@@ -103,19 +138,19 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
         // one register and one 5-bit immediate
         Opcode::In | Opcode::Out | Opcode::Intr | Opcode::Into => {
             if !(instr.register_code != 0b1100 || instr.register_code != 0b0100 || instr.register_code != 0b1000 ) {
-                return Err(Box::new(ValidationError(instr.clone())));
+                return Err(Box::new(ValidationError::InvalidRegisterCodeError(instr.register_code, instr.opcode.clone())));
             }
 
             match instr.operand_a {
-                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError(instr.clone()))),
+                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
                 _ => {}
             }
 
             match instr.operand_b {
-                Operand::Register(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError(instr.clone()))),
+                Operand::Register(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotShortImmediateError(instr.operand_b.clone()))),
                 Operand::ShortImmediate(imm) => {
                     if imm > 0x001F {
-                        return Err(Box::new(ValidationError(instr.clone())))
+                        return Err(Box::new(ValidationError::ImmediateTooLargeError(imm as u16)))
                     }
                 }
             }
@@ -124,17 +159,17 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
         // one register and one 16 bit immediate
         Opcode::MovI => {
             if !(instr.register_code != 0b1100 || instr.register_code != 0b0100 || instr.register_code != 0b1000 ) {
-                return Err(Box::new(ValidationError(instr.clone())));
+                return Err(Box::new(ValidationError::InvalidRegisterCodeError(instr.register_code, instr.opcode.clone())));
             }
 
             match instr.operand_a {
-                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError(instr.clone()))),
+                Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
                 _ => {}
             }
 
             // large immediate cannot be out of range due to u16 type limits
             match instr.operand_b {
-                Operand::Register(_) | Operand::ShortImmediate(_) => return Err(Box::new(ValidationError(instr.clone()))),
+                Operand::Register(_) | Operand::ShortImmediate(_) => return Err(Box::new(ValidationError::OperandNotLongImmediateError(instr.operand_b.clone()))),
                 _ => {}
             }
         }
@@ -147,6 +182,7 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use crate::assembler::process_line;
+    use super::validate_label;
 
 
     #[test]
@@ -268,5 +304,39 @@ mod tests {
     #[should_panic]
     fn test_long_operand_overflow() {
         process_line("movi ax 65536").unwrap();
+    }
+
+
+    #[test]
+    fn test_valid_labels() {
+        validate_label("label").unwrap();
+        validate_label("__label").unwrap();
+        validate_label("__abc__123").unwrap();
+        validate_label("_").unwrap();
+        validate_label("a").unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn label_starts_with_digit() {
+        validate_label("123").unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn label_contains_symbol() {
+        validate_label("l@bel").unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn label_contains_space() {
+        validate_label("hello world").unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn label_contains_non_ascii() {
+        validate_label("aБcd").unwrap();
     }
 }

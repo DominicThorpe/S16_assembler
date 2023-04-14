@@ -1,5 +1,5 @@
 use crate::repr::instruction::Instruction;
-use crate::validation::validate_instruction;
+use crate::validation::{validate_instruction, validate_label};
 
 
 /**
@@ -8,11 +8,17 @@ use crate::validation::validate_instruction;
  */
 pub fn process_line(line:&str) -> Option<Instruction> {
     if line.ends_with(":") {
+        validate_label(&line[..line.len() - 1]).unwrap()
         // label table processing here
-    } else {
+    } 
+    
+    else {
         let line = match line.find(":") {
-            Some(index) => (line[index + 1..]).trim(),
-            None => line
+            None => line,
+            Some(index) => {
+                validate_label(&line[..index]).unwrap();
+                (line[index + 1..]).trim()
+            }
         };
 
         let instr = Instruction::from(line);
