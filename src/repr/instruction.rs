@@ -23,12 +23,12 @@ impl Into<u16> for Operand {
 /**
  * Represents a Sim6 instruction
  */
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Instruction {
-    opcode: Opcode,
-    register_code: u16,
-    operand_a: Operand,
-    operand_b: Operand
+    pub opcode: Opcode,
+    pub register_code: u16,
+    pub operand_a: Operand,
+    pub operand_b: Operand
 }
 
 enum InstrType {
@@ -68,7 +68,7 @@ impl From<&str> for Instruction {
             },
 
             true  => { // is an immediate
-                if Opcode::from(tokens.get(0).unwrap()) != Opcode::PushI {
+                if Opcode::from(tokens.get(0).unwrap()) != Opcode::MovI {
                     let operand_b = Operand::ShortImmediate(tokens.get(2).unwrap().parse::<u8>().unwrap());
                     return Instruction::new(Opcode::from(tokens.get(0).unwrap()), operand_a, operand_b);
                 } else {
@@ -110,7 +110,7 @@ mod tests {
         assert_eq!(Instruction::from("ADD ax, bx"), Instruction::new(Opcode::Add, Operand::Register(Register::Ax), Operand::Register(Register::Bx)));
         assert_eq!(Instruction::from("ADDC ax"), Instruction::new(Opcode::Addc, Operand::Register(Register::Ax), Operand::Register(Register::None)));
         assert_eq!(Instruction::from("in dl, 5"), Instruction::new(Opcode::In, Operand::Register(Register::Dl), Operand::ShortImmediate(5)));
-        assert_eq!(Instruction::from("pushi sp, 700"), Instruction::new(Opcode::PushI, Operand::Register(Register::Sp), Operand::LargeImmediate(700)));
+        assert_eq!(Instruction::from("movi sp, 700"), Instruction::new(Opcode::MovI, Operand::Register(Register::Sp), Operand::LargeImmediate(700)));
     }
 
 
@@ -140,7 +140,7 @@ mod tests {
             _ => panic!("Invalid")
         }
 
-        let binary:InstrType = Instruction::new(Opcode::PushI, Operand::Register(Register::Sp), Operand::LargeImmediate(700)).into();
+        let binary:InstrType = Instruction::new(Opcode::MovI, Operand::Register(Register::Sp), Operand::LargeImmediate(700)).into();
         match binary {
             InstrType::Long(bin) => assert_eq!(bin, 0x5307_02BC),
             _ => panic!("Invalid")

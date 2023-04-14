@@ -1,7 +1,7 @@
 /**
  * Represents the full range of opcodes available to the Sim6 processor
  */
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Opcode {
     Nop, // Do nothing
     Add, // Rd = Rd + Rt
@@ -23,7 +23,7 @@ pub enum Opcode {
     In, // Push Rd to port[imm]
     Out, // Move val in port[imm]
     Lda, // Load address of label
-    PushI, // Push word to stack
+    MovI, // Push word to register
     Mul, // Rd = Rth * Rtl (unsigned)
     Imul, // Rd = Rth * Rtl (signed)
     Div, // Rd = Rth / Rtl (unsigned)
@@ -85,7 +85,7 @@ impl Into<u16> for Opcode {
             Opcode::In    => 17,
             Opcode::Out   => 18,
             Opcode::Lda   => 19,
-            Opcode::PushI  => 20,
+            Opcode::MovI  => 20,
             Opcode::Mul   => 21,
             Opcode::Imul  => 22,
             Opcode::Div   => 23,
@@ -150,7 +150,7 @@ impl From<&String> for Opcode {
             "in"    => Opcode::In,
             "out"   => Opcode::Out,
             "lda"   => Opcode::Lda,
-            "pushi"  => Opcode::PushI,
+            "movi"  => Opcode::MovI,
             "mul"   => Opcode::Mul,
             "imul"  => Opcode::Imul,
             "div"   => Opcode::Div,
@@ -177,8 +177,8 @@ impl From<&String> for Opcode {
             "jnzro" => Opcode::Jnzro,
             "jovf"  => Opcode::Jovf,
             "jcry"  => Opcode::Jcry,
-            "Scry"  => Opcode::Scry,
-            "Ccry"  => Opcode::Ccry,
+            "scry"  => Opcode::Scry,
+            "ccry"  => Opcode::Ccry,
             "eitr"  => Opcode::Eitr,
             "ditr"  => Opcode::Ditr,
             "intr"  => Opcode::Intr,
