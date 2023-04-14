@@ -113,7 +113,11 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
 
             match instr.operand_b {
                 Operand::Register(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError(instr.clone()))),
-                _ => {}
+                Operand::ShortImmediate(imm) => {
+                    if imm > 0x001F {
+                        return Err(Box::new(ValidationError(instr.clone())))
+                    }
+                }
             }
         }
 
@@ -128,6 +132,7 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
                 _ => {}
             }
 
+            // large immediate cannot be out of range due to u16 type limits
             match instr.operand_b {
                 Operand::Register(_) | Operand::ShortImmediate(_) => return Err(Box::new(ValidationError(instr.clone()))),
                 _ => {}
@@ -177,12 +182,13 @@ mod tests {
         process_line("  in rp, 10");
         process_line("out ax 10");
         process_line("InTr rp, 0");
-        process_line("lbl: Into, sp,,, 80");
+        process_line("lbl: Into, sp,,, 0");
     }
 
     #[test]
     fn test_valid_rl_instrs() {
         process_line("mOvi ax   700");
+        process_line("mOvi ax   0");
     }
 
 
@@ -250,5 +256,17 @@ mod tests {
     #[should_panic]
     fn test_rl_with_no_reg() {
         process_line("addc 1000").unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_short_operand_overflow() {
+        process_line("in ax 32").unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_long_operand_overflow() {
+        process_line("movi ax 65536").unwrap();
     }
 }

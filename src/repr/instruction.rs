@@ -55,7 +55,8 @@ impl Into<InstrType> for Instruction {
 
 impl From<&str> for Instruction {
     /**
-     * Takes a string representing a Sim6 instruction and converts it to an `Instruction`
+     * Takes a string representing a Sim6 instruction and converts it to an `Instruction`, will panic if it
+     * find an immediate too big for the number of bits given.
      */
     fn from(line:&str) -> Instruction {
         let tokens:Vec<String> = line.split_whitespace().map(|token| token.replace(",", "").to_owned()).collect();
@@ -69,10 +70,10 @@ impl From<&str> for Instruction {
 
             true  => { // is an immediate
                 if Opcode::from(tokens.get(0).unwrap()) != Opcode::MovI {
-                    let operand_b = Operand::ShortImmediate(tokens.get(2).unwrap().parse::<u8>().unwrap());
+                    let operand_b = Operand::ShortImmediate(tokens.get(2).unwrap().parse::<u8>().expect("Immediate cannot fit into 5 bits"));
                     return Instruction::new(Opcode::from(tokens.get(0).unwrap()), operand_a, operand_b);
                 } else {
-                    let operand_b = Operand::LargeImmediate(tokens.get(2).unwrap().parse::<u16>().unwrap());
+                    let operand_b = Operand::LargeImmediate(tokens.get(2).unwrap().parse::<u16>().expect("Immediate cannot fit into 16 bits"));
                     return Instruction::new(Opcode::from(tokens.get(0).unwrap()), operand_a, operand_b);
                 }
             }
