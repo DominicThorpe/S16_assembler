@@ -181,129 +181,131 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use crate::assembler::process_line;
     use super::validate_label;
 
 
     #[test]
     fn test_valid_nn_instrs() {
-        process_line("  NOP");
-        process_line("my_label: POPA");
-        process_line("pusha");
-        process_line("ret");
-        process_line("scry");
-        process_line("CcRy");
-        process_line("__hello:      Eitr    ");
-        process_line("Ditr");
-        process_line("Iret");
+        process_line("  NOP", &HashMap::new());
+        process_line("my_label: POPA", &HashMap::new());
+        process_line("pusha", &HashMap::new());
+        process_line("ret", &HashMap::new());
+        process_line("scry", &HashMap::new());
+        process_line("CcRy", &HashMap::new());
+        process_line("__hello:      Eitr    ", &HashMap::new());
+        process_line("Ditr", &HashMap::new());
+        process_line("Iret", &HashMap::new());
     }
 
 
     #[test]
     fn test_valid_rn_instrs() {
-        process_line("ADDC  ax");
-        process_line("inc bl");
-        process_line("Subb bh");
-        process_line("Dec    dx");
-        process_line("label:  Neg DX");
-        process_line("_l_a_b_e_l: Push  aH");
-        process_line("Pop Ah");
-        process_line("Csign        ah");
-        process_line("CLEAR rp");
+        process_line("ADDC  ax", &HashMap::new());
+        process_line("inc bl", &HashMap::new());
+        process_line("Subb bh", &HashMap::new());
+        process_line("Dec    dx", &HashMap::new());
+        process_line("label:  Neg DX", &HashMap::new());
+        process_line("_l_a_b_e_l: Push  aH", &HashMap::new());
+        process_line("Pop Ah", &HashMap::new());
+        process_line("Csign        ah", &HashMap::new());
+        process_line("CLEAR rp", &HashMap::new());
     }
 
 
     #[test]
     fn test_valid_ri_instrs() {
-        process_line("  in rp, 10");
-        process_line("out ax 10");
-        process_line("InTr rp, 0");
-        process_line("lbl: Into, sp,,, 0");
+        process_line("  in rp, 10", &HashMap::new());
+        process_line("out ax 10", &HashMap::new());
+        process_line("InTr rp, 0", &HashMap::new());
+        process_line("lbl: Into, sp,,, 0", &HashMap::new());
     }
 
     #[test]
     fn test_valid_rl_instrs() {
-        process_line("mOvi ax   700");
-        process_line("mOvi ax   0");
+        process_line("mOvi ax   700", &HashMap::new());
+        process_line("mOvi ax   0", &HashMap::new());
     }
 
 
     #[test]
     fn test_valid_rr_instrs() {
-        process_line("ADD ax bx");
-        process_line("sub ax bx");
-        process_line("move ah bh");
-        process_line("And al bh");
-        process_line("SRa al bl");
+        process_line("ADD ax bx", &HashMap::new());
+        process_line("sub ax bx", &HashMap::new());
+        process_line("move ah bh", &HashMap::new());
+        process_line("And al bh", &HashMap::new());
+        process_line("SRa al bl", &HashMap::new());
     }
 
     #[test]
     #[should_panic]
     fn test_nn_with_reg() {
-        process_line("nop ax").unwrap();
+        process_line("nop ax", &HashMap::new()).unwrap();
     }
 
 
     #[test]
     #[should_panic]
     fn test_rr_with_one_reg() {
-        process_line("add ax").unwrap();
+        process_line("add ax", &HashMap::new()).unwrap();
     }
 
 
     #[test]
     #[should_panic]
     fn test_rr_with_imm() {
-        process_line("add ax 10").unwrap();
+        process_line("add ax 10", &HashMap::new()).unwrap();
     }
 
 
     #[test]
     #[should_panic]
     fn test_rn_with_two_reg() {
-        process_line("addc ax sp").unwrap();
+        process_line("addc ax sp", &HashMap::new()).unwrap();
     }
 
     #[test]
     #[should_panic]
     fn test_rn_with_imm() {
-        process_line("addc 5").unwrap();
+        process_line("addc 5", &HashMap::new()).unwrap();
     }
 
     #[test]
     #[should_panic]
     fn test_ri_with_no_imm() {
-        process_line("out ax").unwrap();
+        process_line("out ax", &HashMap::new()).unwrap();
     }
 
     #[test]
     #[should_panic]
     fn test_ri_with_two_reg() {
-        process_line("in ax sp").unwrap();
+        process_line("in ax sp", &HashMap::new()).unwrap();
     }
 
     #[test]
     #[should_panic]
     fn test_rl_with_two_reg() {
-        process_line("movi ax sp").unwrap();
+        process_line("movi ax sp", &HashMap::new()).unwrap();
     }
 
     #[test]
     #[should_panic]
     fn test_rl_with_no_reg() {
-        process_line("addc 1000").unwrap();
+        process_line("addc 1000", &HashMap::new()).unwrap();
     }
 
     #[test]
     #[should_panic]
     fn test_short_operand_overflow() {
-        process_line("in ax 32").unwrap();
+        process_line("in ax 32", &HashMap::new()).unwrap();
     }
 
     #[test]
     #[should_panic]
     fn test_long_operand_overflow() {
-        process_line("movi ax 65536").unwrap();
+        process_line("movi ax 65536", &HashMap::new()).unwrap();
     }
 
 
