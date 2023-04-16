@@ -2,3 +2,4 @@
 /.vscode
 *.exe
 *.asm
+!test_files/*.asm
