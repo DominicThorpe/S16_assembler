@@ -8,7 +8,7 @@ mod validation;
 mod label_table;
 
 use assembler::process_line;
-use label_table::get_label_table_entry_from_line;
+use label_table::get_label_table;
 
 
 
@@ -19,12 +19,7 @@ fn main() {
 
     let input_file = OpenOptions::new().read(true).open(filename).unwrap();
 
-    let label_table:HashMap<String, usize> = BufReader::new(&input_file).lines()
-                                        .enumerate()
-                                        .filter_map(|(line_num, line)| match get_label_table_entry_from_line(line_num, &line.unwrap()) {
-                                            Some(label) => Some(label),
-                                            None => None
-                                        }).collect();
+    let label_table:HashMap<String, usize> = get_label_table(&input_file);
     let input_lines = BufReader::new(&input_file).lines().filter_map(|line| match line.unwrap().trim() {
         "" => None, 
         l => process_line(l, &label_table)
