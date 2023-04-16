@@ -58,7 +58,7 @@ impl From<&str> for Instruction {
      * Takes a string representing a Sim6 instruction and converts it to an `Instruction`, will panic if it
      * find an immediate too big for the number of bits given.
      */
-    fn from(line:&str) -> Instruction {
+    fn from(line:&str) -> Instruction {        
         let tokens:Vec<String> = line.split_whitespace().map(|token| token.replace(",", "").to_owned()).collect();
 
         let operand_a = Operand::Register(Register::from(tokens.get(1).unwrap_or(&String::from("none"))));
@@ -86,7 +86,7 @@ impl Instruction {
      * Creates an instruction from the given parameters, auto-calculates the register code
      */
     #[allow(dead_code)]
-    fn new(opcode:Opcode, operand_a:Operand, operand_b:Operand) -> Instruction {
+    pub fn new(opcode:Opcode, operand_a:Operand, operand_b:Operand) -> Instruction {
         Instruction {
             opcode: opcode,
             register_code: Register::get_reg_code(&operand_a, &operand_b),

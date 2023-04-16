@@ -83,7 +83,7 @@ impl From<&String> for Register {
             "bp" => Register::Bp,
             "sp" => Register::Sp,
             "pc" => Register::Pc,
-            _ => panic!("Invalid register found")
+            _ => panic!("Invalid register {} found", reg)
         }
     }
 }

@@ -30,6 +30,7 @@ pub fn get_label_table(input_file:&File) -> HashMap<String, usize> {
             continue;
         } else if let Some(index) = line.find(":") { // if the line is a label and an instruction
             let label = line[..index].to_string();
+            validate_label(&label).unwrap();
 
             line[..line.len() - 1].to_string();
             lable_table.insert(label, line_num);

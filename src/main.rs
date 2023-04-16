@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::OpenOptions;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Seek};
 
 mod assembler;
 mod repr;
@@ -17,9 +17,11 @@ fn main() {
     let filename:&str = "test.asm";
     let output_name:&str = "output.exe";
 
-    let input_file = OpenOptions::new().read(true).open(filename).unwrap();
+    let mut input_file = OpenOptions::new().read(true).open(filename).unwrap();
 
     let label_table:HashMap<String, usize> = get_label_table(&input_file);
+    input_file.rewind().unwrap();
+
     let input_lines = BufReader::new(&input_file).lines().filter_map(|line| match line.unwrap().trim() {
         "" => None, 
         l => process_line(l, &label_table)
