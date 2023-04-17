@@ -65,7 +65,10 @@ impl From<&str> for Instruction {
 
         let opcode = Opcode::from(tokens.get(0).unwrap());
         let operand_a = Operand::Register(Register::from(tokens.get(1).unwrap_or(&String::from("none"))));
-        match tokens.get(2).unwrap_or(&String::from("none")).starts_with("0") {
+
+        // get register operand or an immediate operand if the 1st character is a base-10 digit (hex and binary immediates
+        // start with a prefix starting with 0)
+        match tokens.get(2).unwrap_or(&String::from("none")).chars().nth(0).unwrap().is_digit(10) {
             false => { // is a register
                 let operand_b = Operand::Register(Register::from(tokens.get(2).unwrap_or(&String::from("none"))));
                 return Instruction::new(opcode, operand_a, operand_b);
