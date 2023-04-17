@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use super::register::Register;
 use super::opcode::Opcode;
 
@@ -61,21 +63,17 @@ impl From<&str> for Instruction {
     fn from(line:&str) -> Instruction {        
         let tokens:Vec<String> = line.split_whitespace().map(|token| token.replace(",", "").to_owned()).collect();
 
+        let opcode = Opcode::from(tokens.get(0).unwrap());
         let operand_a = Operand::Register(Register::from(tokens.get(1).unwrap_or(&String::from("none"))));
-        match tokens.get(2).unwrap_or(&String::from("none")).parse::<u64>().is_ok() {
+        match tokens.get(2).unwrap_or(&String::from("none")).starts_with("0") {
             false => { // is a register
                 let operand_b = Operand::Register(Register::from(tokens.get(2).unwrap_or(&String::from("none"))));
-                return Instruction::new(Opcode::from(tokens.get(0).unwrap()), operand_a, operand_b);
+                return Instruction::new(opcode, operand_a, operand_b);
             },
 
-            true  => { // is an immediate
-                if Opcode::from(tokens.get(0).unwrap()) != Opcode::MovI {
-                    let operand_b = Operand::ShortImmediate(tokens.get(2).unwrap().parse::<u8>().expect("Immediate cannot fit into 5 bits"));
-                    return Instruction::new(Opcode::from(tokens.get(0).unwrap()), operand_a, operand_b);
-                } else {
-                    let operand_b = Operand::LargeImmediate(tokens.get(2).unwrap().parse::<u16>().expect("Immediate cannot fit into 16 bits"));
-                    return Instruction::new(Opcode::from(tokens.get(0).unwrap()), operand_a, operand_b);
-                }
+            true => {
+                let operand_b = get_immediate_from_string(&opcode, tokens.get(2).unwrap()).unwrap();
+                return Instruction::new(opcode, operand_a, operand_b)
             }
         }
     }
@@ -97,10 +95,32 @@ impl Instruction {
 }
 
 
+/**
+ * Takes a string representing an integer either in decimal, hex (with the prefix '0x'), or binary (with
+ * the prefix '0b') and returns an `Opcode::LongImmediate` or an `Opcode::ShortImmediate` depending on the
+ * opcode provided.
+ */
+fn get_immediate_from_string(opcode:&Opcode, original:&str) -> Result<Operand, Box<dyn Error>> {
+    let immediate:u16;
+    if original.starts_with("0x") {
+        immediate = u16::from_str_radix(&original[2..], 16)?;
+    } else if original.starts_with("0b") {
+        immediate = u16::from_str_radix(&original[2..], 2)?;
+    } else {
+        immediate = original.parse().unwrap();
+    }
+
+    match opcode {
+        Opcode::MovI => Ok(Operand::LargeImmediate(immediate)),
+        _ => Ok(Operand::ShortImmediate(immediate.try_into()?))
+    }
+}
+
+
 
 #[cfg(test)]
 mod tests {
-    use super::{Instruction, Operand, InstrType};
+    use super::*;
     use crate::repr::opcode::Opcode;
     use crate::repr::register::Register;
 
@@ -146,5 +166,24 @@ mod tests {
             InstrType::Long(bin) => assert_eq!(bin, 0x5307_02BC),
             _ => panic!("Invalid")
         }
+    }
+
+
+    #[test]
+    fn test_get_immediate() {
+        assert_eq!(get_immediate_from_string(&Opcode::Add, "0").unwrap(), Operand::ShortImmediate(0));
+        assert_eq!(get_immediate_from_string(&Opcode::Add, "20").unwrap(), Operand::ShortImmediate(20));
+        assert_eq!(get_immediate_from_string(&Opcode::Add, "31").unwrap(), Operand::ShortImmediate(31));
+        assert_eq!(get_immediate_from_string(&Opcode::MovI, "65535").unwrap(), Operand::LargeImmediate(0xFFFF));
+
+        assert_eq!(get_immediate_from_string(&Opcode::Add, "0b0").unwrap(), Operand::ShortImmediate(0));
+        assert_eq!(get_immediate_from_string(&Opcode::Add, "0b11001").unwrap(), Operand::ShortImmediate(25));
+        assert_eq!(get_immediate_from_string(&Opcode::Add, "0b11111").unwrap(), Operand::ShortImmediate(31));
+        assert_eq!(get_immediate_from_string(&Opcode::MovI, "0b1111111111111111").unwrap(), Operand::LargeImmediate(0xFFFF));
+
+        assert_eq!(get_immediate_from_string(&Opcode::Add, "0x000").unwrap(), Operand::ShortImmediate(0));
+        assert_eq!(get_immediate_from_string(&Opcode::Add, "0x19").unwrap(), Operand::ShortImmediate(25));
+        assert_eq!(get_immediate_from_string(&Opcode::Add, "0x1F").unwrap(), Operand::ShortImmediate(31));
+        assert_eq!(get_immediate_from_string(&Opcode::MovI, "0xFFFF").unwrap(), Operand::LargeImmediate(0xFFFF));
     }
 }
