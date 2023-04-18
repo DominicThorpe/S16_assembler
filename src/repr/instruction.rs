@@ -36,7 +36,7 @@ pub struct Instruction {
     pub operand_b: Operand
 }
 
-enum InstrType {
+pub enum InstrType {
     Regular(u16),
     Long(u32)
 }
@@ -138,7 +138,7 @@ fn get_immediate_from_string(opcode:&Opcode, original:&str) -> Result<Operand, B
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
 pub struct Data {
-    bytes:Vec<u8>
+    pub bytes:Vec<u8>
 }
 
 impl From<&str> for Data {
