@@ -84,9 +84,9 @@ mod tests {
     #[test]
     fn check_label_substitution() {
         let input_lines = load_input_lines("test_files/test_label_substitution.asm");
-        assert_eq!(Instruction::new(Opcode::MovI, Operand::Register(Register::Cx), Operand::LargeImmediate(17)), input_lines[5].clone().into());
-        assert_eq!(Instruction::new(Opcode::MovI, Operand::Register(Register::Ax), Operand::LargeImmediate(9)), input_lines[7].clone().into());
-        assert_eq!(Instruction::new(Opcode::MovI, Operand::Register(Register::Bx), Operand::LargeImmediate(4)), input_lines[8].clone().into());
+        assert_eq!(Instruction::new(Opcode::MovI, Operand::Register(Register::Cx), Operand::LargeImmediate(0x580C)), input_lines[5].clone().into());
+        assert_eq!(Instruction::new(Opcode::MovI, Operand::Register(Register::Ax), Operand::LargeImmediate(0x5804)), input_lines[7].clone().into());
+        assert_eq!(Instruction::new(Opcode::MovI, Operand::Register(Register::Bx), Operand::LargeImmediate(0x9004)), input_lines[8].clone().into());
     }
 
 

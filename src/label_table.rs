@@ -13,7 +13,8 @@ pub fn get_label_table(input_file:&File) -> HashMap<String, usize> {
     let mut lable_table:HashMap<String, usize> = HashMap::new();
 
     let mut data_mode = true;
-    let mut line_num:usize = 0;
+    let mut code_line_num:usize = 0x5800;
+    let mut data_line_num:usize = 0x9000;
 
     // filter out all empty lines and trim away whitespace
     let input_lines:Vec<String> = BufReader::new(input_file).lines().filter_map(|line| match line.unwrap().trim() {
@@ -33,8 +34,11 @@ pub fn get_label_table(input_file:&File) -> HashMap<String, usize> {
             let label = line[..line.len() - 1].to_string();
 
             validate_label(&label).unwrap();
-            lable_table.insert(label, line_num);
-
+            match data_mode {
+                true => lable_table.insert(label, data_line_num),
+                false => lable_table.insert(label, code_line_num)
+            };
+            
             continue;
         } 
         
@@ -44,7 +48,10 @@ pub fn get_label_table(input_file:&File) -> HashMap<String, usize> {
             validate_label(&label).unwrap();
 
             line[..line.len() - 1].to_string();
-            lable_table.insert(label, line_num);
+            match data_mode {
+                true => lable_table.insert(label, data_line_num),
+                false => lable_table.insert(label, code_line_num)
+            };
         }
 
         if data_mode == true {
@@ -55,11 +62,11 @@ pub fn get_label_table(input_file:&File) -> HashMap<String, usize> {
 
             let tokens:Vec<&str> = data.split_whitespace().collect();
             match *tokens.get(0).unwrap() {
-                ".byte" => line_num += 1,
-                ".word" => line_num += 2,
-                ".long" => line_num += 4,
-                ".array" => line_num += tokens.len() - 1,
-                ".asciiz" => line_num += line[line.find("`").unwrap()..line.len() - 1].len() + 1,
+                ".byte" => data_line_num += 1,
+                ".word" => data_line_num += 2,
+                ".long" => data_line_num += 4,
+                ".array" => data_line_num += tokens.len() - 1,
+                ".asciiz" => data_line_num += line[line.find("`").unwrap()..line.len() - 1].len() + 1,
                 invalid => panic!("{} is not a valid datatype", invalid)
             }
         }
@@ -67,8 +74,8 @@ pub fn get_label_table(input_file:&File) -> HashMap<String, usize> {
         // add 2 lines for a 16 bit instr and 4 for a 32 bit instr
         else {
             match line.to_lowercase().contains("movi") {
-                true => line_num += 4,
-                false => line_num += 2
+                true => code_line_num += 4,
+                false => code_line_num += 2
             }
         }
     }
@@ -90,18 +97,16 @@ mod tests {
         let input_file = OpenOptions::new().read(true).open("test_files/test_label_table_gen.asm").unwrap();
         let label_table = get_label_table(&input_file);
 
-        println!("{:#?}", label_table);
+        assert_eq!(label_table["my_byte"], 0x9000);
+        assert_eq!(label_table["my_word"], 0x9001);
+        assert_eq!(label_table["my_long"], 0x9003);
+        assert_eq!(label_table["my_array"], 0x9007);
+        assert_eq!(label_table["my_ascii"], 0x900C);
 
-        assert_eq!(label_table["my_byte"], 0);
-        assert_eq!(label_table["my_word"], 1);
-        assert_eq!(label_table["my_long"], 3);
-        assert_eq!(label_table["my_array"], 7);
-        assert_eq!(label_table["my_ascii"], 12);
-
-        assert_eq!(label_table["start"], 26);
-        assert_eq!(label_table["label_2"], 30);
-        assert_eq!(label_table["label_3"], 32);
-        assert_eq!(label_table["label_4"], 38);
+        assert_eq!(label_table["start"], 0x5800);
+        assert_eq!(label_table["label_2"], 0x5804);
+        assert_eq!(label_table["label_3"], 0x5806);
+        assert_eq!(label_table["label_4"], 0x580C);
     }
 
 
