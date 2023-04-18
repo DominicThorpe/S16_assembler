@@ -22,9 +22,10 @@ fn main() {
     let label_table:HashMap<String, usize> = get_label_table(&input_file);
     input_file.rewind().unwrap();
 
+    let mut data_mode = true;
     let input_lines = BufReader::new(&input_file).lines().filter_map(|line| match line.unwrap().trim() {
         "" => None, 
-        l => process_line(l, &label_table)
+        l => process_line(l, &label_table, &mut data_mode)
     });
 
     let output_file = OpenOptions::new().create(true)
@@ -32,6 +33,6 @@ fn main() {
                                         .write(true)
                                         .open(output_name);
     for line in input_lines {
-        println!("{:?}", line);
+        println!("{}", line);
     }
 }

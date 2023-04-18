@@ -1,4 +1,6 @@
 use std::error::Error;
+use std::fmt::Display;
+use std::fmt;
 
 use super::register::Register;
 use super::opcode::Opcode;
@@ -120,6 +122,98 @@ fn get_immediate_from_string(opcode:&Opcode, original:&str) -> Result<Operand, B
 }
 
 
+#[derive(Debug, PartialEq, Eq)]
+#[allow(dead_code)]
+pub struct Data {
+    bytes:Vec<u8>
+}
+
+impl From<&str> for Data {
+    /**
+     * Takes a string and converts it into a `Vec<u8>` for the `Data` struct.
+     */
+    fn from(line:&str) -> Data {
+        let index = line.find(":").unwrap_or(0);
+        let tokens:Vec<&str> = line[index..].split_whitespace().collect();
+
+        // first token in the kind of data expected, byte, 2 byte word, 4 byte long word, array of bytes
+        // or an ascii string with a null byte auto-appended.
+        match *tokens.get(0).expect(&format!("Insufficient tokens in data line: '{}'", line)) {
+            ".byte" => {
+                Data {
+                    bytes: vec![
+                        tokens.get(1)
+                              .expect(&format!("Insufficient tokens in data line: '{}'", line))
+                              .parse::<u8>()
+                              .unwrap()
+                    ]
+                }
+            },
+            
+            ".word" => {
+                let immediate = tokens.get(1)
+                                      .expect(&format!("Insufficient tokens in data line: '{}'", line))
+                                      .parse::<u16>()
+                                      .unwrap();
+                Data {
+                    bytes: immediate.to_be_bytes().to_vec()
+                }
+            },
+
+            ".long" => {
+                let immediate = tokens.get(1)
+                                      .expect(&format!("Insufficient tokens in data line: '{}'", line))
+                                      .parse::<u32>()
+                                      .unwrap();
+                Data {
+                    bytes: immediate.to_be_bytes().to_vec()
+                }
+            },
+
+            ".array" => {
+                let bytes:Vec<u8> = tokens[1..].into_iter().map(|b| b.parse::<u8>().unwrap()).collect();
+                Data {
+                    bytes: bytes
+                }
+            },
+
+            ".asciiz" => {
+                let mut string = line[line.find("`").unwrap() + 1 .. line.len() - 1].as_bytes().to_vec();
+                string.push(0x00);
+
+                Data {
+                    bytes: string
+                }
+            }
+
+            datatype => panic!("'{}' is not a valid data instruction type", datatype)
+        }
+    }
+}
+
+impl Display for Data {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Data({:?})", self.bytes.clone().iter().map(|num| format!("0x{:02X?}", num)).collect::<Vec<String>>())
+    }
+}
+
+
+#[derive(Debug)]
+pub enum InstructionOrData {
+    Instruction(Instruction),
+    Data(Data)
+}
+
+impl Display for InstructionOrData {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            InstructionOrData::Instruction(instr) => write!(f, "{:?}", instr),
+            InstructionOrData::Data(data) => write!(f, "{}", data)
+        }
+    }
+}
+
+
 
 #[cfg(test)]
 mod tests {
@@ -188,5 +282,27 @@ mod tests {
         assert_eq!(get_immediate_from_string(&Opcode::Add, "0x19").unwrap(), Operand::ShortImmediate(25));
         assert_eq!(get_immediate_from_string(&Opcode::Add, "0x1F").unwrap(), Operand::ShortImmediate(31));
         assert_eq!(get_immediate_from_string(&Opcode::MovI, "0xFFFF").unwrap(), Operand::LargeImmediate(0xFFFF));
+    }
+
+
+    #[test]
+    fn test_get_valid_data() {
+        assert_eq!(Data::from(".byte 25"), Data { bytes: vec![25] });
+        assert_eq!(Data::from(".word 7000"), Data { bytes: vec![0x1B, 0x58] });
+        assert_eq!(Data::from(".long 700000000"), Data { bytes: vec![0x29, 0xB9, 0x27, 0x00] });
+        assert_eq!(Data::from(".array 25 40 32 18"), Data { bytes: vec![25, 40, 32, 18] });
+        assert_eq!(Data::from(".asciiz `Hey you!`"), Data { bytes: vec![0x48, 0x65, 0x79, 0x20, 0x79, 0x6F, 0x75, 0x21, 0x00] });
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_data_type() {
+        _ = Data::from(".bad 70");
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_data_pos_overflow() {
+        _ = Data::from(".long 7000000000");
     }
 }

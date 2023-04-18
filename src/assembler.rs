@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::repr::instruction::Instruction;
+use crate::repr::instruction::{Instruction, Data, InstructionOrData};
 use crate::validation::{validate_instruction, validate_label};
 
 
@@ -8,7 +8,14 @@ use crate::validation::{validate_instruction, validate_label};
  * Takes a line of S6 assembly and removes the label. Returns `None` if the line is just a label, otherwise
  * generates an `Instruction` for the line.
  */
-pub fn process_line(line:&str, label_table:&HashMap<String, usize>) -> Option<Instruction> {
+pub fn process_line(line:&str, label_table:&HashMap<String, usize>, data_mode:&mut bool) -> Option<InstructionOrData> {
+    println!("{}", line);
+    
+    // this is a single-threaded assembler, therefore mutable static variable is ok
+    if line == "code:" {
+        *data_mode = false;
+    }
+
     // get the line excluding any labels ending in ":"
     let mut line = match line.find(":") {
         None => line,
@@ -30,10 +37,18 @@ pub fn process_line(line:&str, label_table:&HashMap<String, usize>) -> Option<In
         line = new_line.as_str();
     }
 
-    let instr = Instruction::from(line);
-    validate_instruction(&instr).unwrap();
-    
-    Some(instr)
+    match data_mode {
+        true => {
+            let data = Data::from(line);
+            return Some(InstructionOrData::Data(data));
+        }
+
+        false => {
+            let instr = Instruction::from(line);
+            validate_instruction(&instr).unwrap();
+            return Some(InstructionOrData::Instruction(instr));
+        }
+    }    
 }
 
 
@@ -45,7 +60,7 @@ mod tests {
     use std::io::{BufRead, BufReader, Seek};
 
     use crate::label_table::get_label_table;
-    use crate::repr::instruction::Instruction;
+    use crate::repr::instruction::{Instruction, InstructionOrData};
     use crate::repr::opcode::Opcode;
     use crate::repr::instruction::Operand;
     use crate::repr::register::Register;
@@ -54,7 +69,9 @@ mod tests {
 
     #[test]
     fn check_label_substitution() {
-        let mut input_file = OpenOptions::new().read(true).open("test_files/test_label_substitution.asm").unwrap();
+        let mut input_file = OpenOptions::new().read(true)
+                                               .open("test_files/test_label_substitution.asm")
+                                               .unwrap();
         
         let label_table:HashMap<String, usize> = get_label_table(&input_file);
         println!("{:#?}", label_table);
@@ -62,7 +79,17 @@ mod tests {
 
         let input_lines:Vec<Instruction> = BufReader::new(&input_file).lines().filter_map(|line| match line.unwrap().trim() {
             "" => None, 
-            l => process_line(l, &label_table)
+            l => {
+                match process_line(l, &label_table, &mut false) {
+                    None => None,
+                    Some(data_or_instr) => {
+                        match data_or_instr {
+                            InstructionOrData::Instruction(instr) => Some(instr),
+                            _ => panic!("Did not find an instruction")
+                        }
+                    }
+                }
+            }
         }).collect();
 
         assert_eq!(input_lines[3], Instruction::new(Opcode::MovI, Operand::Register(Register::Cx), Operand::LargeImmediate(12)));
