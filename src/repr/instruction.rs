@@ -135,7 +135,7 @@ fn get_immediate_from_string(opcode:&Opcode, original:&str) -> Result<Operand, B
 }
 
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
 pub struct Data {
     bytes:Vec<u8>
@@ -212,7 +212,7 @@ impl Display for Data {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum InstructionOrData {
     Instruction(Instruction),
     Data(Data)
@@ -223,6 +223,15 @@ impl Display for InstructionOrData {
         match self {
             InstructionOrData::Instruction(instr) => write!(f, "{:?}", instr),
             InstructionOrData::Data(data) => write!(f, "{}", data)
+        }
+    }
+}
+
+impl Into<Instruction> for InstructionOrData {
+    fn into(self) -> Instruction {
+        match self {
+            InstructionOrData::Instruction(instr) => instr,
+            InstructionOrData::Data(_) => panic!("{:?} is not an instruction", self)
         }
     }
 }

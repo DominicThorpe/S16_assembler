@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::repr::instruction::{Instruction, Data, InstructionOrData};
-use crate::validation::{validate_instruction, validate_label};
+use crate::repr::instruction::*;
+use crate::validation::*;
 
 
 /**
@@ -67,32 +67,33 @@ mod tests {
     use super::process_line;
 
 
-    #[test]
-    fn check_label_substitution() {
+    fn load_input_lines(filename:&str) -> Vec<InstructionOrData> {
         let mut input_file = OpenOptions::new().read(true)
-                                               .open("test_files/test_label_substitution.asm")
+                                               .open(filename)
                                                .unwrap();
         
         let label_table:HashMap<String, usize> = get_label_table(&input_file);
-        println!("{:#?}", label_table);
         input_file.rewind().unwrap();
 
-        let input_lines:Vec<Instruction> = BufReader::new(&input_file).lines().filter_map(|line| match line.unwrap().trim() {
+        let mut data_mode = true;
+        BufReader::new(&input_file).lines().filter_map(|line| match line.unwrap().trim() {
             "" => None, 
-            l => {
-                match process_line(l, &label_table, &mut false) {
-                    None => None,
-                    Some(data_or_instr) => {
-                        match data_or_instr {
-                            InstructionOrData::Instruction(instr) => Some(instr),
-                            _ => panic!("Did not find an instruction")
-                        }
-                    }
-                }
-            }
-        }).collect();
+            l => process_line(l, &label_table, &mut data_mode)
+        }).collect()
+    }
 
-        assert_eq!(input_lines[3], Instruction::new(Opcode::MovI, Operand::Register(Register::Cx), Operand::LargeImmediate(12)));
-        assert_eq!(input_lines[5], Instruction::new(Opcode::MovI, Operand::Register(Register::Ax), Operand::LargeImmediate(4)));
+
+    #[test]
+    fn check_label_substitution() {
+        let input_lines = load_input_lines("test_files/test_label_substitution.asm");
+        assert_eq!(Instruction::new(Opcode::MovI, Operand::Register(Register::Cx), Operand::LargeImmediate(12)), input_lines[3].clone().into());
+        assert_eq!(Instruction::new(Opcode::MovI, Operand::Register(Register::Ax), Operand::LargeImmediate(4)), input_lines[5].clone().into());
+    }
+
+
+    #[test]
+    #[should_panic]
+    fn test_mixed_code_data() {
+        let _ = load_input_lines("test_files/test_mixed_code_data.asm");
     }
 }

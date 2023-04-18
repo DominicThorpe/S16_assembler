@@ -1,3 +1,4 @@
+code:
 start: 
     add ax bx
     mul al ah
