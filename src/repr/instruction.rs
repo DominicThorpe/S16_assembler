@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::fmt::Display;
 use std::fmt;
+use num_traits::Num;
 
 use super::register::Register;
 use super::opcode::Opcode;
@@ -101,20 +102,32 @@ impl Instruction {
 
 
 /**
+ * Takes a string representing a number in decimal, hex, or binary, removes the "0x" or "0b" prefix if
+ * necessary, and returns the value as type `T`. 
+ * 
+ * Will return a `FromStrRadixErr` if the number is invalid.
+ */
+fn convert_imm_str_to_unsigned<T: Num>(original:&str) -> Result<T, <T as Num>::FromStrRadixErr> {
+    let immediate:T;
+    if original.starts_with("0x") {
+        immediate = T::from_str_radix(original.strip_prefix("0x").unwrap(), 16)?;
+    } else if original.starts_with("0b") {
+        immediate = T::from_str_radix(original.strip_prefix("0b").unwrap(), 2)?;
+    } else {
+        immediate = T::from_str_radix(original, 10)?;
+    }
+
+    Ok(immediate)
+}
+
+
+/**
  * Takes a string representing an integer either in decimal, hex (with the prefix '0x'), or binary (with
  * the prefix '0b') and returns an `Opcode::LongImmediate` or an `Opcode::ShortImmediate` depending on the
  * opcode provided.
  */
 fn get_immediate_from_string(opcode:&Opcode, original:&str) -> Result<Operand, Box<dyn Error>> {
-    let immediate:u16;
-    if original.starts_with("0x") {
-        immediate = u16::from_str_radix(&original[2..], 16)?;
-    } else if original.starts_with("0b") {
-        immediate = u16::from_str_radix(&original[2..], 2)?;
-    } else {
-        immediate = original.parse().unwrap();
-    }
-
+    let immediate = convert_imm_str_to_unsigned(original)?;
     match opcode {
         Opcode::MovI => Ok(Operand::LargeImmediate(immediate)),
         _ => Ok(Operand::ShortImmediate(immediate.try_into()?))
@@ -142,36 +155,37 @@ impl From<&str> for Data {
             ".byte" => {
                 Data {
                     bytes: vec![
-                        tokens.get(1)
-                              .expect(&format!("Insufficient tokens in data line: '{}'", line))
-                              .parse::<u8>()
-                              .unwrap()
+                        convert_imm_str_to_unsigned(
+                            tokens.get(1).expect(&format!("Insufficient tokens in data line: '{}'", line))
+                        ).unwrap()
                     ]
                 }
             },
             
             ".word" => {
-                let immediate = tokens.get(1)
-                                      .expect(&format!("Insufficient tokens in data line: '{}'", line))
-                                      .parse::<u16>()
-                                      .unwrap();
+                let immediate:u16 = convert_imm_str_to_unsigned(
+                    tokens.get(1).expect(&format!("Insufficient tokens in data line: '{}'", line))
+                ).unwrap();
+
                 Data {
                     bytes: immediate.to_be_bytes().to_vec()
                 }
             },
 
             ".long" => {
-                let immediate = tokens.get(1)
-                                      .expect(&format!("Insufficient tokens in data line: '{}'", line))
-                                      .parse::<u32>()
-                                      .unwrap();
+                let immediate:u32 = convert_imm_str_to_unsigned(
+                    tokens.get(1).expect(&format!("Insufficient tokens in data line: '{}'", line))
+                ).unwrap();
+
                 Data {
                     bytes: immediate.to_be_bytes().to_vec()
                 }
             },
 
             ".array" => {
-                let bytes:Vec<u8> = tokens[1..].into_iter().map(|b| b.parse::<u8>().unwrap()).collect();
+                let bytes:Vec<u8> = tokens[1..].into_iter()
+                                               .map(|b| convert_imm_str_to_unsigned(b).unwrap())
+                                               .collect();
                 Data {
                     bytes: bytes
                 }
@@ -288,9 +302,12 @@ mod tests {
     #[test]
     fn test_get_valid_data() {
         assert_eq!(Data::from(".byte 25"), Data { bytes: vec![25] });
-        assert_eq!(Data::from(".word 7000"), Data { bytes: vec![0x1B, 0x58] });
-        assert_eq!(Data::from(".long 700000000"), Data { bytes: vec![0x29, 0xB9, 0x27, 0x00] });
+        assert_eq!(Data::from(".byte 0x50"), Data { bytes: vec![0x50] });
+        assert_eq!(Data::from(".word 0xAABB"), Data { bytes: vec![0xAA, 0xBB] });
+        assert_eq!(Data::from(".word 0b1010101010101010"), Data { bytes: vec![0xAA, 0xAA] });
+        assert_eq!(Data::from(".long 0x12345678"), Data { bytes: vec![0x12, 0x34, 0x56, 0x78] });
         assert_eq!(Data::from(".array 25 40 32 18"), Data { bytes: vec![25, 40, 32, 18] });
+        assert_eq!(Data::from(".array 0xAC 40 0b11001100 18"), Data { bytes: vec![0xAC, 40, 0b11001100, 18] });
         assert_eq!(Data::from(".asciiz `Hey you!`"), Data { bytes: vec![0x48, 0x65, 0x79, 0x20, 0x79, 0x6F, 0x75, 0x21, 0x00] });
     }
 
@@ -304,5 +321,11 @@ mod tests {
     #[should_panic]
     fn test_data_pos_overflow() {
         _ = Data::from(".long 7000000000");
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_int_prefix() {
+        _ = Data::from(".byte 0c55");
     }
 }
