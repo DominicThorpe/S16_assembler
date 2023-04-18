@@ -12,6 +12,7 @@ use crate::validation::validate_label;
 pub fn get_label_table(input_file:&File) -> HashMap<String, usize> {
     let mut lable_table:HashMap<String, usize> = HashMap::new();
 
+    let mut data_mode = true;
     let mut line_num:usize = 0;
 
     // filter out all empty lines and trim away whitespace
@@ -21,14 +22,24 @@ pub fn get_label_table(input_file:&File) -> HashMap<String, usize> {
     }).collect();
 
     for line in input_lines {
-        if line.ends_with(":") { // if the line is just a label
+        // if the data section has ended, move into code mode
+        if line.contains("code:") {
+            data_mode = false;
+            continue
+        }
+
+        // if the line is just a label
+        if line.ends_with(":") { 
             let label = line[..line.len() - 1].to_string();
 
             validate_label(&label).unwrap();
             lable_table.insert(label, line_num);
 
             continue;
-        } else if let Some(index) = line.find(":") { // if the line is a label and an instruction
+        } 
+        
+        // if the line is a label and an instruction or data
+        else if let Some(index) = line.find(":") { 
             let label = line[..index].to_string();
             validate_label(&label).unwrap();
 
@@ -36,10 +47,29 @@ pub fn get_label_table(input_file:&File) -> HashMap<String, usize> {
             lable_table.insert(label, line_num);
         }
 
+        if data_mode == true {
+            let data = match line.find(":") {
+                Some(index) => &line[index + 1..],
+                None => &line
+            };
+
+            let tokens:Vec<&str> = data.split_whitespace().collect();
+            match *tokens.get(0).unwrap() {
+                ".byte" => line_num += 1,
+                ".word" => line_num += 2,
+                ".long" => line_num += 4,
+                ".array" => line_num += tokens.len() - 1,
+                ".asciiz" => line_num += line[line.find("`").unwrap()..line.len() - 1].len() + 1,
+                invalid => panic!("{} is not a valid datatype", invalid)
+            }
+        }
+
         // add 2 lines for a 16 bit instr and 4 for a 32 bit instr
-        match line.to_lowercase().contains("movi") {
-            true => line_num += 4,
-            false => line_num += 2
+        else {
+            match line.to_lowercase().contains("movi") {
+                true => line_num += 4,
+                false => line_num += 2
+            }
         }
     }
 
@@ -60,10 +90,18 @@ mod tests {
         let input_file = OpenOptions::new().read(true).open("test_files/test_label_table_gen.asm").unwrap();
         let label_table = get_label_table(&input_file);
 
-        assert_eq!(label_table["start"], 0);
-        assert_eq!(label_table["label_2"], 4);
-        assert_eq!(label_table["label_3"], 6);
-        assert_eq!(label_table["label_4"], 12);
+        println!("{:#?}", label_table);
+
+        assert_eq!(label_table["my_byte"], 0);
+        assert_eq!(label_table["my_word"], 1);
+        assert_eq!(label_table["my_long"], 3);
+        assert_eq!(label_table["my_array"], 7);
+        assert_eq!(label_table["my_ascii"], 12);
+
+        assert_eq!(label_table["start"], 26);
+        assert_eq!(label_table["label_2"], 30);
+        assert_eq!(label_table["label_3"], 32);
+        assert_eq!(label_table["label_4"], 38);
     }
 
 

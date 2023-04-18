@@ -8,9 +8,7 @@ use crate::validation::*;
  * Takes a line of S6 assembly and removes the label. Returns `None` if the line is just a label, otherwise
  * generates an `Instruction` for the line.
  */
-pub fn process_line(line:&str, label_table:&HashMap<String, usize>, data_mode:&mut bool) -> Option<InstructionOrData> {
-    println!("{}", line);
-    
+pub fn process_line(line:&str, label_table:&HashMap<String, usize>, data_mode:&mut bool) -> Option<InstructionOrData> {  
     // this is a single-threaded assembler, therefore mutable static variable is ok
     if line == "code:" {
         *data_mode = false;
@@ -86,8 +84,9 @@ mod tests {
     #[test]
     fn check_label_substitution() {
         let input_lines = load_input_lines("test_files/test_label_substitution.asm");
-        assert_eq!(Instruction::new(Opcode::MovI, Operand::Register(Register::Cx), Operand::LargeImmediate(12)), input_lines[3].clone().into());
-        assert_eq!(Instruction::new(Opcode::MovI, Operand::Register(Register::Ax), Operand::LargeImmediate(4)), input_lines[5].clone().into());
+        assert_eq!(Instruction::new(Opcode::MovI, Operand::Register(Register::Cx), Operand::LargeImmediate(17)), input_lines[5].clone().into());
+        assert_eq!(Instruction::new(Opcode::MovI, Operand::Register(Register::Ax), Operand::LargeImmediate(9)), input_lines[7].clone().into());
+        assert_eq!(Instruction::new(Opcode::MovI, Operand::Register(Register::Bx), Operand::LargeImmediate(4)), input_lines[8].clone().into());
     }
 
 
