@@ -5,7 +5,7 @@ data:
 code:
     start: 
         add ax bx
-        mul al ah
+        mul al al
 
     label_1:
         sub ah bh

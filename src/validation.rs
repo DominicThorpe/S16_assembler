@@ -7,6 +7,7 @@ use std::{fmt, error::Error};
 enum ValidationError {
     InvalidRegisterCodeError(u16, Opcode),
     RegisterNotNoneError(Register),
+    MixedRegisterTypesError(Register, Register),
     RegisterIsNoneError(Register),
     OperandNotRegisterError(Operand),
     OperandNotShortImmediateError(Operand),
@@ -22,6 +23,7 @@ impl fmt::Display for ValidationError {
         match self {
             ValidationError::InvalidRegisterCodeError(code, opcode) => write!(f, "{:04b} is not a valid register code for opcode {:?}", code, opcode),
             ValidationError::RegisterNotNoneError(reg) => write!(f, "Register {:?} should be None", reg),
+            ValidationError::MixedRegisterTypesError(reg_a, reg_b) => write!(f, "Register {:?} and {:?} are either of different sizes or mixed high/low", reg_a, reg_b),
             ValidationError::RegisterIsNoneError(reg) => write!(f, "Register {:?} must not be None", reg),
             ValidationError::OperandNotRegisterError(operand) => write!(f, "Operand {:?} should be a register", operand),
             ValidationError::OperandNotShortImmediateError(operand) => write!(f, "Operand {:?} should be a short immediate", operand),
@@ -47,6 +49,51 @@ pub fn validate_label(label:&str) -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+
+/**
+ * Takes a pair of `Operand`s which should represent `Operand::Register`s and returns `Ok(())` if they
+ * match or a `ValidationError` if they are either of mixed sizes (16 and 8 bits) or if a high register
+ * is paired with a low register.
+ */
+fn validate_register_operand_pair(operand_a:&Operand, operand_b:&Operand) -> Result<(), Box<dyn Error>> {
+    let reg_a = match operand_a {
+        Operand::Register(reg_a) => reg_a,
+        _ => return Err(Box::new(ValidationError::OperandNotRegisterError(operand_a.clone())))
+    };
+
+    let reg_b = match operand_b {
+        Operand::Register(reg_b) => reg_b,
+        _ => return Err(Box::new(ValidationError::OperandNotRegisterError(operand_b.clone())))
+    };
+
+    match reg_a {
+        Register::Ax | Register::Bx | Register::Cx | Register::Dx | Register::Sp | Register::Fp
+         | Register::Bp | Register::Rp => {
+            match reg_b {
+                Register::Ax | Register::Bx | Register::Cx | Register::Dx | Register::Sp | Register::Fp
+                 | Register::Bp | Register::Rp => return Ok(()),
+                _ => return Err(Box::new(ValidationError::MixedRegisterTypesError(reg_a.clone(), reg_b.clone()))),
+            }
+         }
+        
+        Register::Ah | Register::Bh | Register::Ch | Register::Dh => {
+            match reg_b {
+                Register::Ah | Register::Bh | Register::Ch | Register::Dh => return Ok(()),
+                _ => return Err(Box::new(ValidationError::MixedRegisterTypesError(reg_a.clone(), reg_b.clone()))),
+            }
+        }
+
+        Register::Al | Register::Bl | Register::Cl | Register::Dl => {
+            match reg_b {
+                Register::Al | Register::Bl | Register::Cl | Register::Dl => return Ok(()),
+                _ => return Err(Box::new(ValidationError::MixedRegisterTypesError(reg_a.clone(), reg_b.clone()))),
+            }
+        }
+
+        Register::None | Register::Pc | Register::St => return Err(Box::new(ValidationError::RegisterIsNoneError(reg_a.clone())))
+    }
 }
 
 
@@ -105,6 +152,8 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
                 Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
                 _ => {}
             }
+
+            validate_register_operand_pair(&instr.operand_a, &instr.operand_b)?;
         }
 
         // one register operand
@@ -238,7 +287,7 @@ mod tests {
         process_line("ADDu ax bx", &HashMap::new(), &mut false);
         process_line("subu ax bx", &HashMap::new(), &mut false);
         process_line("move ah bh", &HashMap::new(), &mut false);
-        process_line("And al bh", &HashMap::new(), &mut false);
+        process_line("And al bl", &HashMap::new(), &mut false);
         process_line("SRa al bl", &HashMap::new(), &mut false);
         process_line("Load ax bx", &HashMap::new(), &mut false);
         process_line("Store ax bx", &HashMap::new(), &mut false);
@@ -303,6 +352,18 @@ mod tests {
     #[should_panic]
     fn test_rl_with_no_reg() {
         process_line("addc 1000", &HashMap::new(), &mut false).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_mixed_high_low_reg() {
+        process_line("add ah, bl", &HashMap::new(), &mut false).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_mixed_size_reg() {
+        process_line("add ax, bl", &HashMap::new(), &mut false).unwrap();
     }
 
     #[test]
