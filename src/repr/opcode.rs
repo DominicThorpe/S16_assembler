@@ -4,10 +4,12 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Opcode {
     Nop, // Do nothing
-    Add, // Rd = Rd + Rt
+    Add, // Rd = Rd + Rt (signed)
+    Addu, // Rd = Rd + Rt (unsigned)
     Addc, // Rd = Rd + Flags[Carry]
     Inc, // RD = Rd + 1
-    Sub, // Rd = Rd - Rt
+    Sub, // Rd = Rd - Rt (signed)
+    Subu, // Rd = Rd - Rt (unsigned)
     Subb, // Rd = Rd - Flags[Carry]
     Dec, // Rd = Rd - 1
     Cmp, // Set flags for result of Rd - Rt
@@ -24,10 +26,10 @@ pub enum Opcode {
     Out, // Move val in port[imm]
     Lda, // Load address of label
     MovI, // Push word to register
-    Mul, // Rd = Rth * Rtl (unsigned)
-    Imul, // Rd = Rth * Rtl (signed)
-    Div, // Rd = Rth / Rtl (unsigned)
-    Idiv, // Rd = Rth / Rtl (signed)
+    Mul, // Rd = Rth * Rtl (signed)
+    Mulu, // Rd = Rth * Rtl (unsigned)
+    Div, // Rd = Rth / Rtl (signed)
+    Divu, // Rd = Rth / Rtl (unsigned)
     Csign, // Sign extend Rdl into Rdh
     Not, // Rd = ~Rd
     And, // Rd = Rd & Rt
@@ -69,60 +71,62 @@ impl Into<u16> for Opcode {
         match self {
             Opcode::Nop    => 0,
             Opcode::Add    => 1,
-            Opcode::Addc   => 2,
-            Opcode::Inc    => 3,
-            Opcode::Sub    => 4,
-            Opcode::Subb   => 5,
-            Opcode::Dec    => 6,
-            Opcode::Cmp    => 7,
-            Opcode::Neg    => 8,
-            Opcode::Move   => 9,
-            Opcode::Push   => 10,
-            Opcode::Pop    => 11,
-            Opcode::PushA  => 12,
-            Opcode::PopA   => 13,
-            Opcode::PushF  => 14,
-            Opcode::PopF   => 15,
-            Opcode::Swap   => 16,
-            Opcode::In     => 17,
-            Opcode::Out    => 18,
-            Opcode::Lda    => 19,
-            Opcode::MovI   => 20,
-            Opcode::Mul    => 21,
-            Opcode::Imul   => 22,
-            Opcode::Div    => 23,
-            Opcode::Idiv   => 24,
-            Opcode::Csign  => 25,
-            Opcode::Not    => 26,
-            Opcode::And    => 27,
-            Opcode::Or     => 28,
-            Opcode::Xor    => 29,
-            Opcode::Sra    => 30,
-            Opcode::Srl    => 31,
-            Opcode::Sll    => 32,
-            Opcode::Clear  => 33,
-            Opcode::Call   => 34,
-            Opcode::Ret    => 35,
-            Opcode::Jump   => 36,
-            Opcode::Jeq    => 37,
-            Opcode::Jne    => 38,
-            Opcode::Jgt    => 39,
-            Opcode::Jle    => 40,
-            Opcode::Jgte   => 41,
-            Opcode::Jlte   => 42,
-            Opcode::Jzro   => 43,
-            Opcode::Jnzro  => 44,
-            Opcode::Jovf   => 45,
-            Opcode::Jcry   => 46,
-            Opcode::Scry   => 47,
-            Opcode::Ccry   => 48,
-            Opcode::Eitr   => 49,
-            Opcode::Ditr   => 50,
-            Opcode::Intr   => 51,
-            Opcode::Into   => 52,
-            Opcode::Iret   => 53,
-            Opcode::Load   => 52,
-            Opcode::Store  => 53,
+            Opcode::Addu   => 2,
+            Opcode::Addc   => 3,
+            Opcode::Inc    => 4,
+            Opcode::Sub    => 5,
+            Opcode::Subu   => 6,
+            Opcode::Subb   => 7,
+            Opcode::Dec    => 8,
+            Opcode::Cmp    => 9,
+            Opcode::Neg    => 10,
+            Opcode::Move   => 11,
+            Opcode::Push   => 12,
+            Opcode::Pop    => 13,
+            Opcode::PushA  => 14,
+            Opcode::PopA   => 15,
+            Opcode::PushF  => 16,
+            Opcode::PopF   => 17,
+            Opcode::Swap   => 18,
+            Opcode::In     => 19,
+            Opcode::Out    => 20,
+            Opcode::Lda    => 21,
+            Opcode::MovI   => 22,
+            Opcode::Mul    => 23,
+            Opcode::Mulu   => 24,
+            Opcode::Div    => 25,
+            Opcode::Divu   => 26,
+            Opcode::Csign  => 27,
+            Opcode::Not    => 28,
+            Opcode::And    => 29,
+            Opcode::Or     => 30,
+            Opcode::Xor    => 31,
+            Opcode::Sra    => 32,
+            Opcode::Srl    => 33,
+            Opcode::Sll    => 34,
+            Opcode::Clear  => 35,
+            Opcode::Call   => 36,
+            Opcode::Ret    => 37,
+            Opcode::Jump   => 38,
+            Opcode::Jeq    => 39,
+            Opcode::Jne    => 40,
+            Opcode::Jgt    => 41,
+            Opcode::Jle    => 42,
+            Opcode::Jgte   => 43,
+            Opcode::Jlte   => 44,
+            Opcode::Jzro   => 45,
+            Opcode::Jnzro  => 46,
+            Opcode::Jovf   => 47,
+            Opcode::Jcry   => 48,
+            Opcode::Scry   => 49,
+            Opcode::Ccry   => 50,
+            Opcode::Eitr   => 51,
+            Opcode::Ditr   => 52,
+            Opcode::Intr   => 53,
+            Opcode::Into   => 54,
+            Opcode::Iret   => 55,
+            Opcode::Load   => 56,
+            Opcode::Store  => 57,
         } 
     }
 }
@@ -136,9 +140,11 @@ impl From<&String> for Opcode {
         match code.to_lowercase().as_str() {
             "nop"   => Opcode::Nop,
             "add"   => Opcode::Add,
+            "addu"  => Opcode::Addu,
             "addc"  => Opcode::Addc,
             "inc"   => Opcode::Inc,
             "sub"   => Opcode::Sub,
+            "subu"  => Opcode::Subu,
             "subb"  => Opcode::Subb,
             "dec"   => Opcode::Dec,
             "cmp"   => Opcode::Cmp,
@@ -156,9 +162,9 @@ impl From<&String> for Opcode {
             "lda"   => Opcode::Lda,
             "movi"  => Opcode::MovI,
             "mul"   => Opcode::Mul,
-            "imul"  => Opcode::Imul,
+            "mulu"  => Opcode::Mulu,
             "div"   => Opcode::Div,
-            "idiv"  => Opcode::Idiv,
+            "divu"  => Opcode::Divu,
             "csign" => Opcode::Csign,
             "not"   => Opcode::Not,
             "and"   => Opcode::And,

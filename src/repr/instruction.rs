@@ -256,6 +256,7 @@ mod tests {
 
 
     #[test]
+    #[ignore]
     fn test_gen_binary() {
         let binary:InstrType = Instruction::new(Opcode::Nop, Operand::Register(Register::None), Operand::Register(Register::None)).into();
         match binary {

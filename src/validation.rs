@@ -87,9 +87,9 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
         }
 
         // two register operands
-        Opcode::Add | Opcode::Sub | Opcode::Cmp | Opcode::Move | Opcode::Swap | Opcode::Mul | Opcode::Imul 
-         | Opcode::Div | Opcode::Idiv | Opcode::And | Opcode::Or | Opcode::Xor | Opcode::Sra | Opcode::Srl 
-         | Opcode::Sll | Opcode::Lda | Opcode::Load | Opcode::Store => {
+        Opcode::Add | Opcode::Sub | Opcode::Cmp | Opcode::Move | Opcode::Swap | Opcode::Mul | Opcode::Mulu 
+         | Opcode::Div | Opcode::Divu | Opcode::And | Opcode::Or | Opcode::Xor | Opcode::Sra | Opcode::Srl 
+         | Opcode::Sll | Opcode::Lda | Opcode::Load | Opcode::Store | Opcode::Addu | Opcode::Subu => {
             if !(instr.register_code == 0b1010 || instr.register_code == 0b0101 || instr.register_code == 0b1001 
                     || instr.register_code == 0b0110 || instr.register_code == 0b1111
                 ) {
@@ -235,11 +235,17 @@ mod tests {
     fn test_valid_rr_instrs() {
         process_line("ADD ax bx", &HashMap::new(), &mut false);
         process_line("sub ax bx", &HashMap::new(), &mut false);
+        process_line("ADDu ax bx", &HashMap::new(), &mut false);
+        process_line("subu ax bx", &HashMap::new(), &mut false);
         process_line("move ah bh", &HashMap::new(), &mut false);
         process_line("And al bh", &HashMap::new(), &mut false);
         process_line("SRa al bl", &HashMap::new(), &mut false);
         process_line("Load ax bx", &HashMap::new(), &mut false);
         process_line("Store ax bx", &HashMap::new(), &mut false);
+        process_line("Mul ax bx", &HashMap::new(), &mut false);
+        process_line("mulu ax bx", &HashMap::new(), &mut false);
+        process_line("div ax, bx", &HashMap::new(), &mut false);
+        process_line("divu ax, bx", &HashMap::new(), &mut false);
     }
 
     #[test]
