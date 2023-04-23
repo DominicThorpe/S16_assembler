@@ -200,3 +200,24 @@ impl From<&String> for Opcode {
         }
     }
 }
+
+
+impl Opcode {
+    pub fn is_signed(&self) -> bool {
+        match self {
+            Opcode::Add | Opcode::Dec | Opcode::Inc | Opcode::Div | Opcode::Mul => true,
+            _ => false
+        }
+    }
+
+
+    pub fn set_flags(&self) -> bool {
+        match self {
+            Opcode::Add | Opcode::Addc | Opcode::Addu | Opcode::And | Opcode::Clear | Opcode::Cmp
+             | Opcode::Csign | Opcode::Dec | Opcode::Div | Opcode::Divu | Opcode::Inc | Opcode::Mul
+             | Opcode::Mulu | Opcode::Neg | Opcode::Not | Opcode::Or | Opcode::Sll | Opcode::Sra
+             | Opcode::Srl | Opcode::Xor | Opcode::Sub | Opcode::Subu | Opcode::Subb => true,
+            _ => false
+        }
+    }
+}

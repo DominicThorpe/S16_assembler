@@ -31,7 +31,10 @@ impl Into<u16> for Operand {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Instruction {
     pub opcode: Opcode,
-    pub register_code: u16,
+    pub high: bool,
+    pub low: bool,
+    pub signed: bool,
+    pub set_flags: bool,
     pub operand_a: Operand,
     pub operand_b: Operand
 }
@@ -47,13 +50,30 @@ impl Into<InstrType> for Instruction {
      */
     fn into(self) -> InstrType {
         let opcode:u16 = self.opcode.into();
-        let operand_a_code:u16 = self.operand_a.into();
+        let opcode = opcode << 10;
+
+        let high = self.high as u16;
+        let high:u16 = high << 9;
+
+        let low = self.low as u16;
+        let low:u16 = low << 8;
+
+        let flag = self.set_flags as u16;
+        let flag:u16 = flag << 7;
+
+        let signed = self.signed as u16;
+        let signed:u16 = signed << 6;
+
         let operand_b_code:u16 = self.operand_b.clone().into();
+        let operand_a_code:u16 = self.operand_a.into();
+
+        println!("B: {}", operand_b_code);
+
+        let upper_instr = 0 | opcode | high | low | flag | signed;
 
         match self.operand_b {
-            Operand::Register(_) => InstrType::Regular(opcode << 10 | self.register_code << 6 | operand_b_code << 3 | operand_a_code),
-            Operand::ShortImmediate(_) => InstrType::Regular(opcode << 10 | self.register_code << 6 | operand_b_code << 3 | operand_a_code),
-            Operand::LargeImmediate(_) => InstrType::Long((opcode as u32) << 26 | (self.register_code as u32) << 22 | (operand_a_code as u32) << 16 | operand_b_code as u32)
+            Operand::Register(_) | Operand::ShortImmediate(_) => InstrType::Regular(upper_instr | operand_a_code << 3 | operand_b_code),
+            Operand::LargeImmediate(_) => InstrType::Long(u32::from(upper_instr) << 16 | u32::from(operand_a_code) << 16 | operand_b_code as u32)
         }
     }
 }
@@ -87,13 +107,28 @@ impl From<&str> for Instruction {
 
 impl Instruction {
     /**
-     * Creates an instruction from the given parameters, auto-calculates the register code
+     * Creates an instruction from the given parameters, auto-calculates the high, low, flag and 
+     * signed bits.
      */
-    #[allow(dead_code)]
     pub fn new(opcode:Opcode, operand_a:Operand, operand_b:Operand) -> Instruction {
+        let high:bool;
+        let low:bool;
+        match &operand_a {
+            Operand::Register(reg) => {
+                high = reg.is_high_reg();
+                low = reg.is_low_reg();
+            },
+
+            Operand::ShortImmediate(_) 
+             | Operand::LargeImmediate(_) => panic!("Found immediate in 1st operand position")
+        };
+
         Instruction {
+            signed: opcode.is_signed(),
+            set_flags: opcode.set_flags(),
             opcode: opcode,
-            register_code: Register::get_reg_code(&operand_a, &operand_b),
+            high: high,
+            low: low,
             operand_a: operand_a,
             operand_b: operand_b
         }
@@ -136,7 +171,6 @@ fn get_immediate_from_string(opcode:&Opcode, original:&str) -> Result<Operand, B
 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)]
 pub struct Data {
     pub bytes:Vec<u8>
 }
@@ -256,7 +290,6 @@ mod tests {
 
 
     #[test]
-    #[ignore]
     fn test_gen_binary() {
         let binary:InstrType = Instruction::new(Opcode::Nop, Operand::Register(Register::None), Operand::Register(Register::None)).into();
         match binary {
@@ -266,25 +299,25 @@ mod tests {
 
         let binary:InstrType = Instruction::new(Opcode::Add, Operand::Register(Register::Ax), Operand::Register(Register::Bx)).into();
         match binary {
-            InstrType::Regular(bin) => assert_eq!(bin, 0x07C8),
+            InstrType::Regular(bin) => assert_eq!(bin, 0x07C1),
             _ => panic!("Invalid")
         }
 
         let binary:InstrType = Instruction::new(Opcode::Addc, Operand::Register(Register::Ax), Operand::Register(Register::None)).into();
         match binary {
-            InstrType::Regular(bin) => assert_eq!(bin, 0x08C0),
+            InstrType::Regular(bin) => assert_eq!(bin, 0x0F80),
             _ => panic!("Invalid")
         }
 
         let binary:InstrType = Instruction::new(Opcode::In, Operand::Register(Register::Dl), Operand::ShortImmediate(5)).into();
         match binary {
-            InstrType::Regular(bin) => assert_eq!(bin, 0x462B),
+            InstrType::Regular(bin) => assert_eq!(bin, 0x4D1D),
             _ => panic!("Invalid")
         }
 
         let binary:InstrType = Instruction::new(Opcode::MovI, Operand::Register(Register::Sp), Operand::LargeImmediate(700)).into();
         match binary {
-            InstrType::Long(bin) => assert_eq!(bin, 0x5307_02BC),
+            InstrType::Long(bin) => assert_eq!(bin, 0x5B07_02BC),
             _ => panic!("Invalid")
         }
     }

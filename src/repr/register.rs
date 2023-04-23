@@ -1,6 +1,3 @@
-use super::instruction::Operand;
-
-
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Register {
@@ -89,36 +86,29 @@ impl From<&String> for Register {
 }
 
 impl Register {
-    pub fn get_reg_code(reg_a:&Operand, reg_b:&Operand) -> u16 {
-        let reg_a_code = match reg_a {
-            Operand::Register(reg) => {
-                match reg {
-                    Register::None => 0b0000,
-                    Register::Al | Register::Bl | Register::Cl | Register::Dl => 0b0010,
-                    Register::Ah | Register::Bh | Register::Ch | Register::Dh => 0b0001,
-                    Register::Ax | Register::Bx | Register::Cx | Register::Dx | Register::Rp | Register::Fp | Register::Bp | Register::Sp => 0b0011,
-                    _ => panic!("Invalid register upper found")
-                }
-            },
+    /**
+     * Returns true if the register requires the high bit of the instruction to be set.
+     */
+    pub fn is_high_reg(&self) -> bool {
+        match self {
+            Register::Ax | Register::Ah | Register::Bx | Register::Bh | Register::Cx | Register::Ch
+             | Register::Dx | Register::Dh | Register::Bp | Register::Fp | Register::Rp 
+             | Register::Sp => true,
+            _ => false
+        }
+    }
 
-            Operand::ShortImmediate(_) 
-             | Operand::LargeImmediate(_)  => panic!("First operand cannot be an immediate")
-        };
 
-        match reg_b {
-            Operand::Register(reg) => {
-                return match reg {
-                    Register::None => 0b0000,
-                    Register::Al | Register::Bl | Register::Cl | Register::Dl => 0b1000,
-                    Register::Ah | Register::Bh | Register::Ch | Register::Dh => 0b0100,
-                    Register::Ax | Register::Bx | Register::Cx | Register::Dx | Register::Rp | Register::Fp | Register::Bp | Register::Sp => 0b1100,
-                    _ => panic!("Invalid lower register found")
-                } | reg_a_code;
-            },
-
-            Operand::ShortImmediate(_)
-             | Operand::LargeImmediate(_) => return reg_a_code << 2
-        };
+    /**
+     * Returns true if the register requires the low bit of the instruction to be set.
+     */
+    pub fn is_low_reg(&self) -> bool {
+        match self {
+            Register::Ax | Register::Al | Register::Bx | Register::Bl | Register::Cx | Register::Cl
+             | Register::Dx | Register::Dl | Register::Bp | Register::Fp | Register::Rp 
+             | Register::Sp => true,
+            _ => false
+        }
     }
 }
 
@@ -127,7 +117,6 @@ impl Register {
 #[cfg(test)]
 mod tests {
     use super::Register;
-    use crate::repr::instruction::Operand;
 
 
     #[test]
@@ -147,25 +136,5 @@ mod tests {
     #[should_panic]
     fn test_invalid_into_int() {
         let _:u16 = Register::Pc.into();
-    }
-
-
-    #[test]
-    fn get_reg_code() {
-        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Ax), &Operand::Register(Register::Bx)), 0b1111);
-        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Rp), &Operand::Register(Register::Fp)), 0b1111);
-
-        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Ax), &Operand::Register(Register::None)), 0b0011);
-        assert_eq!(Register::get_reg_code(&Operand::Register(Register::None), &Operand::Register(Register::Dx)), 0b1100);
-
-        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Al), &Operand::Register(Register::Bx)), 0b1110);
-        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Ah), &Operand::Register(Register::Bx)), 0b1101);
-        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Ax), &Operand::Register(Register::Bl)), 0b1011);
-        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Ax), &Operand::Register(Register::Bh)), 0b0111);
-
-        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Al), &Operand::Register(Register::Bl)), 0b1010);
-        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Ah), &Operand::Register(Register::Bh)), 0b0101);
-        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Ah), &Operand::Register(Register::Bl)), 0b1001);
-        assert_eq!(Register::get_reg_code(&Operand::Register(Register::Al), &Operand::Register(Register::Bh)), 0b0110);
     }
 }

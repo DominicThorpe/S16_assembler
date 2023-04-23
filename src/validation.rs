@@ -5,7 +5,6 @@ use std::{fmt, error::Error};
 
 #[derive(Debug, Clone)]
 enum ValidationError {
-    InvalidRegisterCodeError(u16, Opcode),
     RegisterNotNoneError(Register),
     MixedRegisterTypesError(Register, Register),
     RegisterIsNoneError(Register),
@@ -21,7 +20,6 @@ impl Error for ValidationError {}
 impl fmt::Display for ValidationError {
     fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
         match self {
-            ValidationError::InvalidRegisterCodeError(code, opcode) => write!(f, "{:04b} is not a valid register code for opcode {:?}", code, opcode),
             ValidationError::RegisterNotNoneError(reg) => write!(f, "Register {:?} should be None", reg),
             ValidationError::MixedRegisterTypesError(reg_a, reg_b) => write!(f, "Register {:?} and {:?} are either of different sizes or mixed high/low", reg_a, reg_b),
             ValidationError::RegisterIsNoneError(reg) => write!(f, "Register {:?} must not be None", reg),
@@ -105,11 +103,6 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
         // No operands
         Opcode::Nop | Opcode::PopA | Opcode::PushA | Opcode::PopF | Opcode::PushF | Opcode::Ret | Opcode::Ccry | Opcode::Scry 
          | Opcode::Eitr | Opcode::Ditr | Opcode::Iret => {
-            // validate the register code
-            if instr.register_code != 0 {
-                return Err(Box::new(ValidationError::InvalidRegisterCodeError(instr.register_code, instr.opcode.clone())));
-            }
-
             // validate operand a
             match &instr.operand_a {
                 Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
@@ -137,12 +130,6 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
         Opcode::Add | Opcode::Sub | Opcode::Cmp | Opcode::Move | Opcode::Swap | Opcode::Mul | Opcode::Mulu 
          | Opcode::Div | Opcode::Divu | Opcode::And | Opcode::Or | Opcode::Xor | Opcode::Sra | Opcode::Srl 
          | Opcode::Sll | Opcode::Lda | Opcode::Load | Opcode::Store | Opcode::Addu | Opcode::Subu => {
-            if !(instr.register_code == 0b1010 || instr.register_code == 0b0101 || instr.register_code == 0b1001 
-                    || instr.register_code == 0b0110 || instr.register_code == 0b1111
-                ) {
-                    return Err(Box::new(ValidationError::InvalidRegisterCodeError(instr.register_code, instr.opcode.clone())));
-            }
-
             match instr.operand_a {
                 Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
                 _ => {}
@@ -160,10 +147,6 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
         Opcode::Addc | Opcode::Inc | Opcode::Subb | Opcode::Dec | Opcode::Neg | Opcode::Push | Opcode::Pop | Opcode::Csign 
          | Opcode::Not | Opcode::Clear | Opcode::Call | Opcode::Jump | Opcode::Jeq | Opcode::Jne | Opcode::Jgt | Opcode::Jle 
          | Opcode::Jgte | Opcode::Jlte | Opcode::Jzro | Opcode::Jnzro | Opcode::Jovf | Opcode::Jcry => {
-            if !(instr.register_code != 0b1100 || instr.register_code != 0b0100 || instr.register_code != 0b1000 ) {
-                return Err(Box::new(ValidationError::InvalidRegisterCodeError(instr.register_code, instr.opcode.clone())));
-            }
-
             match &instr.operand_a {
                 Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
                 Operand::Register(reg) => {
@@ -187,10 +170,6 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
 
         // one register and one 5-bit immediate
         Opcode::In | Opcode::Out | Opcode::Intr | Opcode::Into => {
-            if !(instr.register_code != 0b1100 || instr.register_code != 0b0100 || instr.register_code != 0b1000 ) {
-                return Err(Box::new(ValidationError::InvalidRegisterCodeError(instr.register_code, instr.opcode.clone())));
-            }
-
             match instr.operand_a {
                 Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
                 _ => {}
@@ -208,10 +187,6 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
 
         // one register and one 16 bit immediate
         Opcode::MovI => {
-            if !(instr.register_code != 0b1100 || instr.register_code != 0b0100 || instr.register_code != 0b1000 ) {
-                return Err(Box::new(ValidationError::InvalidRegisterCodeError(instr.register_code, instr.opcode.clone())));
-            }
-
             match instr.operand_a {
                 Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
                 _ => {}
