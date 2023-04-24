@@ -38,6 +38,11 @@ impl fmt::Display for ValidationError {
  * starts with a letter or an underscore.
  */
 pub fn validate_label(label:&str) -> Result<(), Box<dyn Error>> {
+    // valid assembler directive
+    if label == ".data" || label == ".code" {
+        return Ok(());
+    }
+
     if !(label.chars().nth(0).unwrap().is_ascii_alphabetic() || label.chars().nth(0).unwrap() == '_') {
         return Err(Box::new(ValidationError::LabelInvalidFormat(label.to_string())));
     }

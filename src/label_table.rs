@@ -24,7 +24,7 @@ pub fn get_label_table(input_file:&File) -> HashMap<String, usize> {
 
     for line in input_lines {
         // if the data section has ended, move into code mode
-        if line.contains("code:") {
+        if line.contains(".code:") {
             data_mode = false;
             continue
         }

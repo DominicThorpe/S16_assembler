@@ -46,12 +46,20 @@ fn main() {
                                         .unwrap();
     let mut writer = BufWriter::new(output_file);
 
-    let mut bytes:Vec<u8> = Vec::new();
+    let mut bytes:Vec<u8> = vec![0x2E, 0x64, 0x61, 0x74, 0x61, 0x3A]; // ".data:" in ASCII
+    let mut data_mode = true;
     for line in input_lines {
         match line {
-            InstructionOrData::Data(data) => bytes.append(&mut data.bytes.clone().as_mut_slice().to_vec()),
+            InstructionOrData::Data(data) => {
+                bytes.append(&mut data.bytes.clone().as_mut_slice().to_vec());
+            } 
 
             InstructionOrData::Instruction(instr) => {
+                if data_mode {
+                    data_mode = false;
+                    bytes.append(&mut ".code:".as_bytes().to_vec()); // ".code:" in ASCII 
+                }
+
                 let instr_type:InstrType = instr.into();
 
                 match instr_type {

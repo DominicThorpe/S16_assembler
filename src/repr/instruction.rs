@@ -67,8 +67,6 @@ impl Into<InstrType> for Instruction {
         let operand_b_code:u16 = self.operand_b.clone().into();
         let operand_a_code:u16 = self.operand_a.into();
 
-        println!("B: {}", operand_b_code);
-
         let upper_instr = 0 | opcode | high | low | flag | signed;
 
         match self.operand_b {

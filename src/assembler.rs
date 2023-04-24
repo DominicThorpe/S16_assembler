@@ -10,7 +10,7 @@ use crate::validation::*;
  */
 pub fn process_line(line:&str, label_table:&HashMap<String, usize>, data_mode:&mut bool) -> Option<InstructionOrData> {  
     // this is a single-threaded assembler, therefore mutable static variable is ok
-    if line == "code:" {
+    if line == ".code:" {
         *data_mode = false;
     }
 
