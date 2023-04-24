@@ -1,4 +1,4 @@
-data:
+.data:
     my_byte: .byte 0x55
     my_word: .word 7000
     my_long: .long 7000000
@@ -6,7 +6,7 @@ data:
     my_ascii: .asciiz `Hello world!`  
 
 
-code:
+.code:
     start:
         add ax bx
         sub ax bx

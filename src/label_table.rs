@@ -23,6 +23,7 @@ pub fn get_label_table(input_file:&File) -> HashMap<String, usize> {
     }).collect();
 
     for line in input_lines {
+        println!("{}", line);
         // if the data section has ended, move into code mode
         if line.contains(".code:") {
             data_mode = false;

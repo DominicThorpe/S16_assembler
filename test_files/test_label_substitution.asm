@@ -1,8 +1,8 @@
-data:
+.data:
     some_data: .array 0x50 0x27 0x92 0xAC
     one_byte: .byte 0xBC
 
-code:
+.code:
     start: 
         add ax bx
         mul al al
