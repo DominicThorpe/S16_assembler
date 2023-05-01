@@ -107,7 +107,7 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
     match instr.opcode {
         // No operands
         Opcode::Nop | Opcode::PopA | Opcode::PushA | Opcode::PopF | Opcode::PushF | Opcode::Ret | Opcode::Ccry | Opcode::Scry 
-         | Opcode::Eitr | Opcode::Ditr | Opcode::Iret => {
+         | Opcode::Eitr | Opcode::Ditr | Opcode::Iret | Opcode::Halt => {
             // validate operand a
             match &instr.operand_a {
                 Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),

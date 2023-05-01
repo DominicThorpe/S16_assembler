@@ -318,6 +318,12 @@ mod tests {
             InstrType::Long(bin) => assert_eq!(bin, 0x5B07_02BC),
             _ => panic!("Invalid")
         }
+
+        let binary:InstrType = Instruction::new(Opcode::Halt, Operand::Register(Register::None), Operand::Register(Register::None)).into();
+        match binary {
+            InstrType::Regular(bin) => assert_eq!(bin, 0xFC00),
+            _ => panic!("Invalid")
+        }
     }
 
 

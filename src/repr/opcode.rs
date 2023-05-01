@@ -60,7 +60,8 @@ pub enum Opcode {
     Into, // Interrupt code imm if flags[overflow]
     Iret, // return from interrupt
     Load, // load value at address in Rt into Rd
-    Store // store value in Rd into address in Rt
+    Store, // store value in Rd into address in Rt
+    Halt // halt process execution and yield
 }
 
 impl Into<u16> for Opcode {
@@ -127,6 +128,7 @@ impl Into<u16> for Opcode {
             Opcode::Iret   => 55,
             Opcode::Load   => 56,
             Opcode::Store  => 57,
+            Opcode::Halt   => 63
         } 
     }
 }
@@ -195,7 +197,8 @@ impl From<&String> for Opcode {
             "into"  => Opcode::Into,
             "iret"  => Opcode::Iret,
             "load"  => Opcode::Load,
-            "store" => Opcode::Store,  
+            "store" => Opcode::Store,
+            "halt"  => Opcode::Halt,  
             _ => panic!("Invalid opcode found")
         }
     }
