@@ -71,7 +71,7 @@ impl Into<InstrType> for Instruction {
 
         match self.operand_b {
             Operand::Register(_) | Operand::ShortImmediate(_) => InstrType::Regular(upper_instr | operand_a_code << 3 | operand_b_code),
-            Operand::LargeImmediate(_) => InstrType::Long(u32::from(upper_instr) << 16 | u32::from(operand_a_code) << 16 | operand_b_code as u32)
+            Operand::LargeImmediate(_) => InstrType::Long(u32::from(upper_instr) << 16 | u32::from(operand_a_code) << 19 | operand_b_code as u32)
         }
     }
 }
@@ -315,7 +315,7 @@ mod tests {
 
         let binary:InstrType = Instruction::new(Opcode::MovI, Operand::Register(Register::Sp), Operand::LargeImmediate(700)).into();
         match binary {
-            InstrType::Long(bin) => assert_eq!(bin, 0x5B07_02BC),
+            InstrType::Long(bin) => assert_eq!(bin, 0x5B38_02BC),
             _ => panic!("Invalid")
         }
 
