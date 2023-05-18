@@ -134,7 +134,8 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
         // two register operands
         Opcode::Add | Opcode::Sub | Opcode::Cmp | Opcode::Move | Opcode::Swap | Opcode::Mul | Opcode::Mulu 
          | Opcode::Div | Opcode::Divu | Opcode::And | Opcode::Or | Opcode::Xor | Opcode::Sra | Opcode::Srl 
-         | Opcode::Sll | Opcode::Lda | Opcode::Load | Opcode::Store | Opcode::Addu | Opcode::Subu => {
+         | Opcode::Sll | Opcode::Lda | Opcode::Load | Opcode::Store | Opcode::Addu | Opcode::Subu
+         | Opcode::Jzro | Opcode::Jnzro => {
             match instr.operand_a {
                 Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
                 _ => {}
@@ -151,7 +152,7 @@ pub fn validate_instruction(instr:&Instruction) -> Result<(), Box<dyn Error>> {
         // one register operand
         Opcode::Addc | Opcode::Inc | Opcode::Subb | Opcode::Dec | Opcode::Neg | Opcode::Push | Opcode::Pop | Opcode::Csign 
          | Opcode::Not | Opcode::Clear | Opcode::Call | Opcode::Jump | Opcode::Jeq | Opcode::Jne | Opcode::Jgt | Opcode::Jle 
-         | Opcode::Jgte | Opcode::Jlte | Opcode::Jzro | Opcode::Jnzro | Opcode::Jovf | Opcode::Jcry => {
+         | Opcode::Jgte | Opcode::Jlte | Opcode::Jovf | Opcode::Jcry => {
             match &instr.operand_a {
                 Operand::ShortImmediate(_) | Operand::LargeImmediate(_) => return Err(Box::new(ValidationError::OperandNotRegisterError(instr.operand_a.clone()))),
                 Operand::Register(reg) => {
@@ -275,6 +276,8 @@ mod tests {
         process_line("mulu ax bx", &HashMap::new(), &mut false);
         process_line("div ax, bx", &HashMap::new(), &mut false);
         process_line("divu ax, bx", &HashMap::new(), &mut false);
+        process_line("jzro ax, bx", &HashMap::new(), &mut false);
+        process_line("jnzro ax, bx", &HashMap::new(), &mut false);
     }
 
     #[test]
